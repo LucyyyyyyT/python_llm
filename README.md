@@ -7,5 +7,5 @@
 
 This is my python llm project.  
 
-Check out my project on [PyPi] 
+Check out my project on [PyPi] https://pypi.org/project/python-llm-lucy/0.1.0/
 
