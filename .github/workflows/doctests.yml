@@ -23,6 +23,6 @@ jobs:
 
       - name: Run doctests
         run: |
-          python -m doctest --verbose chat.py
+          python -m doctest --verbose python_llm/chat.py
 
       
