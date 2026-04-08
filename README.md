@@ -1,4 +1,11 @@
-[![doctests](https://github.com/LucyyyyyyT/python_llm/actions/workflows/doctests.yml/badge.svg)](https://github.com/LucyyyyyyT/python_llm/actions/workflows/doctests.yml)
-[![test](https://github.com/LucyyyyyyT/python_llm/actions/workflows/test.yml/badge.svg)]
-[![test_integration](https://github.com/LucyyyyyyT/python_llm/actions/workflows/test_integration.yml/badge.svg)]
+# python_llm
+![doctest](https://github.com/LucyyyyyyT/python_llm/actions/workflows/doctests.yml/badge.svg)
+
+![integration-tests](https://github.com/LucyyyyyyT/python_llm/actions/workflows/test_integration.yml/badge.svg)
+
+[![coverage](https://img.shields.io/badge/coverage-90%25-brightgreen)](#)
+
+This is my python llm project. It is a chatbot library using Groq LLM. 
+
+Check out my project on [PyPi](https://pypi.org/project/cmc-csci005-yourname/#description)
 
