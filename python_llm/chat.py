@@ -81,6 +81,8 @@ Farewell, me scurvy monkey friend, may the winds o' fortune blow in yer favor!
             print(response)
     except KeyboardInterrupt:
         print()
+    except EOFError:
+        return
 
 
 if __name__ == '__main__':
