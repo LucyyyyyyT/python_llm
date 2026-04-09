@@ -27,7 +27,7 @@ class Chat:
                     "content": "Write the output in 1-2 sentences. Talk like pirate."
                 },
             ]
-    def send_message(self, message, temperature=0.8):
+    def send_message(self, message, temperature=0.0):
         self.messages.append(
             {
                 # system: never change; user: changes a lot;
