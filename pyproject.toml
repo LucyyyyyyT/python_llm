@@ -16,3 +16,6 @@ dependencies = [
   "requests",
   "groq"
 ]
+
+[project.scripts]
+chat = "chat:repl"
