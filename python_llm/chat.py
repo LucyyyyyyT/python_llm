@@ -8,7 +8,6 @@ import json
 import operator
 import os
 import re
-import sys
 from groq import Groq
 
 from dotenv import load_dotenv
@@ -187,6 +186,8 @@ def is_path_safe(path):
 
 # in pytohn class names are in CamelCase;
 # non-class names (e.g. functions/variables) are in snake_case
+
+
 class Chat:
     '''
     A chat agent that talks with an LLM and helsp with tool usage.
