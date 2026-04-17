@@ -15,16 +15,22 @@ Here is a working example of my code:
 
 ## Usage
 
-Any tool name that starts with '/' will run directly.
+### markdown_compiler
+This example shows how the agent can analyze code structure and answer questions about a project.
+```
+$ cd markdown_compiler
+$ chat
+chat> does this project use regular expressions?
+No. I grepped all of the python files for any uses of the `re` library and did not find any.
+```
 
+### ebay_scraper
+This example shows how the agent can summarize a project and answer questions about it.
 ```
-chat> /ls tools
-tools/calculate.py tools/cat.py tools/grep.py tools/ls.py tools/screenshot.png tools/utils.py
-chat> what files are in the tools folder?
-The files in the tools folder are: calculate.py, cat.py, grep.py, ls.py, and utils.py. There is also a screenshot.png file.
+$ cd ebay_scraper
+$ chat
+chat> tell me about this project
+The README says this project is designed to scrape product information off of ebay.
+chat> is this legal?
+Yes. It is generally legal to scrape webpages, but ebay offers an API that would be more efficient to use.
 ```
-```
-chat> /calculate 2*6
-12
-```
-The two examples above are good examples because they show two things. (1) The '/' works properly and (2) The functions are able to demonstrate a reasonable output.
