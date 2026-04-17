@@ -13,4 +13,4 @@ A chat agent that depends on command line and uses Groq's LLM API. It is able to
 Here is a working example of my code:
 ![Demo](demo.gif)
 
-##Usage
+## Usage
