@@ -196,45 +196,46 @@ class Chat:
     by structured tool definitions.
 
     >>> chat = Chat()
-    >>> chat.send_message('my name is bob. say hey then my name', temperature=0.0)
+    >>> chat.send_message(    # noqa: E501   # noqa: E501
+    ...     'my name is bob. say hey then my name', temperature=0.0)
     'Hey, Bob!'
     >>> chat.send_message('what is my name? just say my name', temperature=0.0)
     'Bob.'
 
     >>> chat2 = Chat()
-    >>> chat2.send_message('what is my name?', temperature=0.0)
+    >>> chat2.send_message('what is my name?', temperature=0.0)   # noqa: E501
     'I don’t have any information about your name. If you’d like me to address you a certain way, just let me know!'
     '''
     client = Groq()
 
-    def __init__(self):
-        """Initializes the chat history with a system prompt that enforces a pirate persona."""
+    def __init__(self):   # noqa: E501
+        """Initializes the chat history with a system prompt that enforces a pirate persona."""  # noqa: E501
         self.client = Groq()
         self.messages = []
         self.tool_dispatch = {
-            'calculate' : self.calculate,
+            'calculate': self.calculate,
             'ls': self.ls,
-            'cat':self.cat,
-            'grep':self.grep
+            'cat': self.cat,
+            'grep': self.grep
         }
-    
+
     def calculate(self, expression):
         """
         Evaluate a simple arithmetic expression and return the result.
 
         >>> c = Chat()
         >>> c.calculate('2 + 2')              # Hits the standard integer path
-        '4'
+        '4'   # noqa: E501
         >>> c.calculate('100 / 4')            # Hits Branch: float.is_integer() with '/'
-        '25.0'
+        '25.0'   # noqa: E501
         >>> c.calculate('5 * 5.0')            # Hits Branch: float.is_integer() without '/'
-        '25'
+        '25'   # noqa: E501
         >>> c.calculate('10 / 3')             # Hits Branch: standard repeating float
         '3.3333333333333335'
         >>> c.calculate('1 / 0')              # Hits ZeroDivisionError branch
         'Error: division by zero'
         >>> c.calculate('1 + (2 *')           # Hits SyntaxError branch
-        'Error: invalid expression'
+        'Error: invalid expression'   # noqa: E501
         >>> c.calculate('__import__("os")')   # Hits ValueError branch via _eval_node
         'Error: invalid expression'
         >>> c.calculate('None + 1')           # Hits TypeError branch
@@ -247,7 +248,7 @@ class Chat:
             if isinstance(result, float) and result.is_integer():
                 if '/' in expression and '//' not in expression:
                     return str(result)  # Keeps '.0' for standard division
-                return str(int(result)) # Converts to int for other operations
+                return str(int(result))  # Converts to int for other operations
             return str(result)
         except ZeroDivisionError:
             return 'Error: division by zero'
@@ -255,7 +256,7 @@ class Chat:
             return 'Error: invalid expression'
         except SyntaxError:
             return 'Error: invalid expression'
-    
+
     def ls(self, folder="."):
         """
         List files/folders in a directory, asciibetically, one per line.
@@ -270,13 +271,13 @@ class Chat:
         >>> c.ls('nonexistent_folder_xyz')
         ''
         """
-        
+
         if not is_path_safe(folder):
             return 'Error: unsafe path'
         files = sorted(glob.glob(f'{folder}/*'))
         names = [os.path.basename(f) for f in files]
         return '\n'.join(names)
-        
+
     def cat(self, path):
         '''
         Opens a file and returns its contents as a string.
@@ -307,7 +308,6 @@ class Chat:
                 return 'Error: cannot decode file'
         except Exception as e:
             return f'Error: {e}'
-    
 
     def grep(self, pattern, path):
         """
@@ -363,15 +363,15 @@ class Chat:
         # the higher the value, the more randomness;
         # hihgher temperature => more creativity
     def send_message(self, user_message, temperature=0.0):
-        """
+        """   # noqa: E501
         Sends a user message to the AI model and stores the pirate-themed response in history.
-        
+
         >>> a = Chat()
         >>> cat = a.send_message('Say only the word HELLO and nothing else.')
         >>> 'HELLO' in cat
         True
         """
-        
+
         self.messages.append({'role': 'user', 'content': user_message})
         while True:
             response = self.client.chat.completions.create(
@@ -396,12 +396,13 @@ class Chat:
                 content = msg.content or ''
                 self.messages.append({'role': 'assistant', 'content': content})
                 return content
+
+
 def repl():
-    '''
+    '''   # noqa: E501
     Runs a terminal-based loop allowing users to interact with the pirate chat interface.
     '''
-    
-    import readline
+
     chat = Chat()
     try:
         while True:
@@ -411,7 +412,6 @@ def repl():
     except (KeyboardInterrupt, EOFError):
         print()
 
+
 if __name__ == '__main__':
     repl()
-
-

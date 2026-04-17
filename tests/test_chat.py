@@ -1,6 +1,6 @@
 """Tests for python_llm/chat.py"""
 import ast
-import builtins
+
 import json
 import pytest
 from unittest.mock import MagicMock, patch, mock_open
@@ -9,12 +9,11 @@ import sys
 sys.path.append('python_llm')
 
 
-
 # Helpers to build fake Groq responses
 
 
 def _make_text_response(content):
-    """Return a fake Groq response with a plain text message (no tool calls)."""
+    """Return a fake Groq response with a plain text message (no tool calls)."""  # noqa: E501
     msg = MagicMock()
     msg.content = content
     msg.tool_calls = None
@@ -38,7 +37,6 @@ def _make_tool_response(tool_name, tool_args, tool_call_id="tc1"):
     return response
 
 
-
 # Fixtures
 
 
@@ -54,7 +52,6 @@ def chat(mock_groq):
     """A Chat instance backed by a mocked Groq client."""
     from python_llm.chat import Chat
     return Chat()
-
 
 
 # is_path_safe
@@ -88,7 +85,6 @@ class TestIsPathSafe:
     def test_embedded_traversal_rejected(self):
         from python_llm.chat import is_path_safe
         assert is_path_safe('some/../file.txt') is False
-
 
 
 # _eval_node
@@ -187,8 +183,7 @@ class TestEvalNode:
         from python_llm.chat import _eval_node
         node = ast.parse('x', mode='eval').body  # ast.Name node
         with pytest.raises(ValueError, match='invalid expression'):
-           assert  _eval_node(node)
-
+            assert _eval_node(node)
 
 
 # Chat.calculate
@@ -214,7 +209,8 @@ class TestCalculate:
         assert chat.calculate('1 + (2 *') == 'Error: invalid expression'
 
     def test_unsafe_expression(self, chat):
-        assert chat.calculate('__import__("os")') == 'Error: invalid expression'
+        assert chat.calculate(
+            '__import__("os")') == 'Error: invalid expression'
 
     def test_none_type_error(self, chat):
         assert chat.calculate('None + 1') == 'Error: invalid expression'
@@ -224,7 +220,6 @@ class TestCalculate:
 
     def test_negative_number(self, chat):
         assert chat.calculate('-5 + 10') == '5'
-    
 
 
 # Chat.ls
@@ -246,7 +241,6 @@ class TestLs:
         result = chat.ls(str(tmp_path))
         lines = result.split('\n')
         assert lines == ['a.txt', 'b.txt']
-
 
 
 # Chat.cat
@@ -278,15 +272,22 @@ class TestCat:
         assert result == 'file contents'
 
     def test_unicode_decode_error_falls_back(self, chat):
-        """First open raises UnicodeDecodeError; second succeeds with utf-16."""
+        """First open raises UnicodeDecodeError; second succeeds with utf-16."""  # noqa: E501
         m = mock_open(read_data='utf16 contents')
-        m.side_effect = [UnicodeDecodeError('utf-8', b'', 0, 1, 'reason'), m.return_value]
+        m.side_effect = [
+            UnicodeDecodeError(
+                'utf-8',
+                b'',
+                0,
+                1,
+                'reason'),
+            m.return_value]
         with patch('builtins.open', m):
             result = chat.cat('somefile.txt')
         assert result == 'utf16 contents'
 
     def test_unicode_decode_error_both_fail(self, chat):
-        """Both utf-8 and utf-16 raise errors; should return cannot decode file."""
+        """Both utf-8 and utf-16 raise errors; should return cannot decode file."""  # noqa: E501
         m = mock_open()
         m.side_effect = [
             UnicodeDecodeError('utf-8', b'', 0, 1, 'reason'),
@@ -298,10 +299,9 @@ class TestCat:
 
     def test_general_exception(self, chat):
         """open raises a general exception; should return Error: <message>."""
-        with patch('builtins.open', side_effect=PermissionError('permission denied')):
+        with patch('builtins.open', side_effect=PermissionError('permission denied')):  # noqa: E501
             result = chat.cat('somefile.txt')
-        assert result == 'Error: [Errno 13] Permission denied: \'somefile.txt\''
-
+        assert result == 'Error: [Errno 13] Permission denied: \'somefile.txt\''  # noqa: E501
 
 
 # Chat.grep
@@ -332,7 +332,6 @@ class TestGrep:
         f.write_text('hello world\n')
         result = chat.grep('zzz_no_match', str(f))
         assert result == ''
-
 
 
 # Chat.send_message
@@ -366,7 +365,8 @@ class TestSendMessage:
         """Model first calls 'calculate', then returns a plain text answer."""
         tool_resp = _make_tool_response('calculate', {'expression': '2 + 2'})
         text_resp = _make_text_response('The answer is 4.')
-        chat.client.chat.completions.create.side_effect = [tool_resp, text_resp]
+        chat.client.chat.completions.create.side_effect = [
+            tool_resp, text_resp]
 
         result = chat.send_message('What is 2 + 2?')
         assert result == 'The answer is 4.'
@@ -374,13 +374,13 @@ class TestSendMessage:
     def test_tool_result_appended_to_history(self, chat, mock_groq):
         tool_resp = _make_tool_response('calculate', {'expression': '1 + 1'})
         text_resp = _make_text_response('2')
-        chat.client.chat.completions.create.side_effect = [tool_resp, text_resp]
+        chat.client.chat.completions.create.side_effect = [
+            tool_resp, text_resp]
 
         chat.send_message('1 + 1?')
         roles = [m['role'] if isinstance(m, dict) else 'assistant_msg'
                  for m in chat.messages]
         assert 'tool' in roles
-
 
 
 # Chat.run_tool  (dispatch table)
@@ -404,7 +404,6 @@ class TestRunTool:
         assert result.startswith('Error: invalid pattern')
 
 
-
 # repl()
 
 
@@ -421,7 +420,7 @@ class TestRepl:
             return val
 
         with patch('builtins.input', side_effect=fake_input):
-            with patch('python_llm.chat.Chat') as MockChat:
+            with patch('python_llm.chat.Chat'):
                 repl()
 
         captured = capsys.readouterr()
@@ -453,7 +452,7 @@ class TestRepl:
         mock_chat_instance.send_message.return_value = 'Hi there!'
 
         with patch('builtins.input', side_effect=fake_input):
-            with patch('python_llm.chat.Chat', return_value=mock_chat_instance):
+            with patch('python_llm.chat.Chat', return_value=mock_chat_instance):  # noqa: E501
                 repl()
 
         captured = capsys.readouterr()
