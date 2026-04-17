@@ -14,3 +14,17 @@ Here is a working example of my code:
 ![Demo](demo.gif)
 
 ## Usage
+
+Any tool name that starts with '/' will run directly.
+
+```
+chat> /ls tools
+tools/calculate.py tools/cat.py tools/grep.py tools/ls.py tools/screenshot.png tools/utils.py
+chat> what files are in the tools folder?
+The files in the tools folder are: calculate.py, cat.py, grep.py, ls.py, and utils.py. There is also a screenshot.png file.
+```
+```
+chat> /calculate 2*6
+12
+```
+The two examples above are good examples because they show two things. (1) The '/' works properly and (2) The functions are able to demonstrate a reasonable output.
