@@ -19,6 +19,7 @@ Here is a working example of my code:
 
 This example shows how the agent can explore a project's file structure.
 
+```
 $ cd docsum
 $ chat
 chat> what files are in this project
@@ -35,3 +36,4 @@ chat> what does chat.py do
 chat.py defines a Chat class that connects to the Groq LLM API,
 maintains conversation history, and supports tool calling for
 ls, cat, grep, and calculate.
+```
