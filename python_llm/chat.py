@@ -10,9 +10,9 @@ import os
 import re
 from groq import Groq
 
-from python_llm.tools.calculator import calculate
-from python_llm.tools.filesystem import ls, cat
-from python_llm.tools.search import grep
+from .tools.calculator import calculate
+from .tools.filesystem import ls, cat
+from .tools.search import grep
 
 from dotenv import load_dotenv
 load_dotenv()
