@@ -10,6 +10,10 @@ import os
 import re
 from groq import Groq
 
+from python_llm.tools.calculator import calculate
+from python_llm.tools.filesystem import ls, cat
+from python_llm.tools.search import grep
+
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -111,78 +115,6 @@ GREP_SCHEMA = {
 
 ALL_TOOL_SCHEMAS = [CALCULATE_SCHEMA, LS_SCHEMA, CAT_SCHEMA, GREP_SCHEMA]
 
-_ALLOWED_OPS = {
-    ast.Add: operator.add,
-    ast.Sub: operator.sub,
-    ast.Mult: operator.mul,
-    ast.Div: operator.truediv,
-    ast.Pow: operator.pow,
-    ast.USub: operator.neg,
-    ast.UAdd: operator.pos,
-    ast.Mod: operator.mod,
-    ast.FloorDiv: operator.floordiv,
-}
-
-
-def _eval_node(node):
-    """
-    Recursively evaluate a single AST node.
-
-    Raises ValueError for unsafe expressions.
-
-    >>> _eval_node(ast.parse('2 + 2', mode='eval').body)
-    4
-    >>> _eval_node(ast.parse('3 * 7', mode='eval').body)
-    21
-    """
-    if isinstance(node, ast.Constant):
-        if isinstance(node.value, (int, float)):
-            return node.value
-        raise ValueError('invalid expression')
-    elif isinstance(node, ast.BinOp):
-        op_type = type(node.op)
-        if op_type not in _ALLOWED_OPS:
-            raise ValueError('invalid expression')
-        left = _eval_node(node.left)
-        right = _eval_node(node.right)
-        return _ALLOWED_OPS[op_type](left, right)
-    elif isinstance(node, ast.UnaryOp):
-        op_type = type(node.op)
-        if op_type not in _ALLOWED_OPS:
-            raise ValueError('invalid expression')
-        operand = _eval_node(node.operand)
-        return _ALLOWED_OPS[op_type](operand)
-    else:
-        raise ValueError('invalid expression')
-
-
-def is_path_safe(path):
-    """
-    Returns True if a path is safe to read.
-
-    Checks for absolute paths or directory traversal.
-
-    >>> is_path_safe('README.md')
-    True
-    >>> is_path_safe('chat.py')
-    True
-    >>> is_path_safe('/etc/passwd')
-    False
-    >>> is_path_safe('../secret.txt')
-    False
-    >>> is_path_safe('some/../file.txt')
-    False
-    >>> is_path_safe('.')
-    True
-    >>> is_path_safe('')
-    True
-    """
-    if path.startswith('/'):
-        return False
-    parts = path.replace('\\', '/').split('/')
-    if '..' in parts:
-        return False
-    return True
 
 # in pytohn class names are in CamelCase;
 # non-class names (e.g. functions/variables) are in snake_case
@@ -211,162 +143,54 @@ class Chat:
         self.client = Groq()
         self.messages = []
         self.tool_dispatch = {
-            'calculate': self.calculate,
-            'ls': self.ls,
-            'cat': self.cat,
-            'grep': self.grep
+            'calculate': calculate,
+            'ls': ls,
+            'cat': cat,
+            'grep': grep
         }
 
-    def calculate(self, expression):
-        """
-        Evaluate a simple arithmetic expression and return the result.
+        def run_tool(self, name, args):
+            """Dispatch a tool call by name."""
+            if name == 'ls':
+                folder = args.get('path', args.get('folder', '.'))
+                return str(ls(folder))
+            if name in self.tool_dispatch:
+                return str(self.tool_dispatch[name](**args))
+            return f"Unknown tool: {name}"
+        
+        def ls(self, folder='.'):
+            """Wrapper for ls tool."""
+            return ls(folder)
 
-        >>> c = Chat()
-        >>> c.calculate('2 + 2')              # Hits the standard integer path
-        '4'
-        >>> c.calculate('100 / 4')            # Hits Branch: float.is_integer() with '/'
-        '25.0'
-        >>> c.calculate('5 * 5.0')            # Hits Branch: float.is_integer() without '/'
-        '25'
-        >>> c.calculate('10 / 3')             # Hits Branch: standard repeating float
-        '3.3333333333333335'
-        >>> c.calculate('1 / 0')              # Hits ZeroDivisionError branch
-        'Error: division by zero'
-        >>> c.calculate('1 + (2 *')           # Hits SyntaxError branch
-        'Error: invalid expression'
-        >>> c.calculate('__import__("os")')   # Hits ValueError branch via _eval_node
-        'Error: invalid expression'
-        >>> c.calculate('None + 1')           # Hits TypeError branch
-        'Error: invalid expression'
-        """
-        try:
-            tree = ast.parse(expression, mode='eval')
-            result = _eval_node(tree.body)
-            # Logic to handle how floats are displayed
-            if isinstance(result, float) and result.is_integer():
-                if '/' in expression and '//' not in expression:
-                    return str(result)  # Keeps '.0' for standard division
-                return str(int(result))  # Converts to int for other operations
-            return str(result)
-        except ZeroDivisionError:
-            return 'Error: division by zero'
-        except (ValueError, TypeError):
-            return 'Error: invalid expression'
-        except SyntaxError:
-            return 'Error: invalid expression'
+        def cat(self, path):
+            """Wrapper for cat tool."""
+            return cat(path)
 
-    def ls(self, folder="."):
-        """
-        List files/folders in a directory, asciibetically, one per line.
-
-        >>> c = Chat()
-        >>> 'python_llm/chat.py' in c.ls('.')
-        False
-        >>> c.ls('/etc')
-        'Error: unsafe path'
-        >>> c.ls('../other')
-        'Error: unsafe path'
-        >>> c.ls('nonexistent_folder_xyz')
-        ''
-        """
-
-        if not is_path_safe(folder):
-            return 'Error: unsafe path'
-        files = sorted(glob.glob(f'{folder}/*'))
-        names = [os.path.basename(f) for f in files]
-        return '\n'.join(names)
-
-    def cat(self, path):
-        '''
-        Opens a file and returns its contents as a string.
-
-        >>> c = Chat()
-        >>> c.cat('python_llm/chat.py')[1:11]
-        '\"\"AI-power'
-        >>> c.cat('nonexistent_file_xyz.txt')
-        'Error: file not found'
-        >>> c.cat('/etc/passwd')
-        'Error: unsafe path'
-        >>> c.cat('../secret.txt')
-        'Error: unsafe path'
-
-        '''
-        if not is_path_safe(path):
-            return 'Error: unsafe path'
-        try:
-            with open(path, 'r', encoding='utf-8') as f:
-                return f.read()
-        except FileNotFoundError:
-            return 'Error: file not found'
-        except UnicodeDecodeError:
-            try:
-                with open(path, 'r', encoding='utf-16') as f:
-                    return f.read()
-            except Exception:
-                return 'Error: cannot decode file'
-        except Exception as e:
-            return f'Error: {e}'
-
-    def grep(self, pattern, path):
-        """
-        Search for lines matching a regex pattern (recursive).
-        Returns matching lines as 'filename:line', or an error string
-
-        >>> c = Chat()
-        >>> result = c.grep('def is_path_safe', 'python_llm/chat.py')
-        >>> 'python_llm/chat.py' in result
-        True
-        >>> c.grep('def ', '/etc')
-        'Error: unsafe path'
-        >>> c.grep('def ', '../other')
-        'Error: unsafe path'
-        >>> c.grep('zzz[n]omatch_xyz', 'chat.py')
-        ''
-        >>> c.grep('[invalid', 'chat.py')
-        'Error: invalid pattern: unterminated character set at position 0'
-        """
-        if not is_path_safe(path):
-            return 'Error: unsafe path'
-        try:
-            compiled = re.compile(pattern)
-        except re.error as e:
-            return f'Error: invalid pattern: {e}'
-
-        results = []
-        if os.path.isfile(path):
-            files = [path]
-        else:
-            files = []
-            for root, dirs, filenames in os.walk(path):
-                dirs[:] = sorted([d for d in dirs if not d.startswith('.')])
-                for fname in sorted(filenames):
-                    files.append(os.path.join(root, fname))
-
-        for filepath in files:
-            try:
-                with open(
-                    filepath, 'r', encoding='utf-8', errors='ignore'
-                ) as f:
-                    for line in f:
-                        if compiled.search(line):
-                            results.append(f'{filepath}:{line.rstrip()}')
-            except Exception:
-                continue
-
-        return '\n'.join(results)
-
+        def grep(self, pattern, path='.'):
+            """Wrapper for grep tool."""
+            return grep(pattern, path)
+        
         # in order to make non-deterministic code deterministic;
         # in general very hard CS problem;
         # in this case, has a "temperature" param that controls randomness;
         # the higher the value, the more randomness;
         # hihgher temperature => more creativity
+
     def send_message(self, user_message, temperature=0.0):
         """
-        Sends a user message to the AI model and stores the pirate-themed response in history.
+        Sends a user message to the AI model and returns the response.
+
+        Each Chat() instance maintains its own independent conversation history.
 
         >>> a = Chat()
-        >>> cat = a.send_message('Say only the word HELLO and nothing else.')
-        >>> 'HELLO' in cat
+        >>> b = Chat()
+        >>> _ = a.send_message('My name is Alice. Just say ok.')
+        >>> _ = b.send_message('My name is Bob. Just say ok.')
+        >>> 'Alice' in a.send_message('What is my name? Just say my name.')
+        True
+        >>> 'Bob' in b.send_message('What is my name? Just say my name.')
+        True
+        >>> 'HELLO' in a.send_message('Say only the word HELLO and nothing else.')
         True
         """
 
@@ -396,20 +220,70 @@ class Chat:
                 return content
 
 
-def repl():
-    '''
-    Runs a terminal-based loop allowing users to interact with the pirate chat interface.
-    '''
-
-    chat = Chat()
-    try:
+    def repl(self):
+        '''
+        Runs a terminal-based loop allowing users to interact with the chat interface.
+        '''
         while True:
-            user_input = input('chat> ')
-            response = chat.send_message(user_input, temperature=0.0)
-            print(response)
-    except (KeyboardInterrupt, EOFError):
-        print()
+            try:
+                user_input = input('chat> ')
+            except (KeyboardInterrupt, EOFError):
+                print()
+                break
 
+            if not user_input:
+                continue
+
+            if user_input.startswith('/'):
+                parts = user_input[1:].split()
+                if not parts:
+                    continue
+                tool = parts[0]
+                args_l = parts[1:]
+
+                if tool == 'ls':
+                    kargs = {'path': args_l[0]} if args_l else {}
+                elif tool == 'cat':
+                    kargs = {'path': args_l[0]} if args_l else {}
+                elif tool == 'grep':
+                    if len(args_l) >= 2:
+                        kargs = {'pattern': args_l[0], 'path': args_l[1]}
+                    elif len(args_l) == 1:
+                        kargs = {'pattern': args_l[0], 'path': '.'}
+                    else:
+                        print('Error: /grep <pattern> <path>')
+                        continue
+                elif tool == 'calculate':
+                    kargs = {'expression': ' '.join(args_l)}
+                else:
+                    print(f"Error command: {tool}")
+                    continue
+
+                result = self.run_tool(tool, kargs)
+                print(result)
+
+                self.messages.append({
+                    'role': 'user',
+                    'content': (
+                        f'[manual command] /{tool} '
+                        f'{" ".join(args_l)}\nOutput:\n{result}'
+                    )
+                })
+                self.messages.append({
+                    'role': 'assistant',
+                    'content': (
+                        f'I ran /{tool} {" ".join(args_l)} '
+                        f'and got: \n{result}'
+                    )
+                })
+
+            else:
+                response = self.send_message(user_input)
+                print(response)
+
+def repl():
+    """Entry point for the chat command."""
+    Chat().repl()
 
 if __name__ == '__main__':
-    repl()
+    Chat().repl()
