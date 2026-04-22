@@ -24,4 +24,6 @@ chat = "python_llm.chat:repl"
 max-line-length = 120
 
 [tool.setuptools.packages.find]
+where = ["."]
 include = ["python_llm*"]
+exclude = ["test_projects*", "tests*"]
