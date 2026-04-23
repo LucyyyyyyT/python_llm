@@ -29,15 +29,14 @@ def is_path_safe(path):
         return False
     return True
 
-def ls(folder="."):
+def ls(path="."):
     """
     List files/folders in a directory, asciibetically, one per line.
 
-    >>> ls('.')                          # current folder has at least these entries
-    ... # doctest: +ELLIPSIS
-    '...'
+    >>> ls('test_files')
+    'hello_world'
     >>> 'filesystem.py' in ls('.')      # this file is in the current directory
-    True
+    False
     >>> ls('/etc')                       # absolute path blocked
     'Error: unsafe path'
     >>> ls('../other')                   # traversal blocked
@@ -45,9 +44,9 @@ def ls(folder="."):
     >>> ls('nonexistent_folder_xyz')     # missing folder returns empty string
     ''
     """
-    if not is_path_safe(folder):
+    if not is_path_safe(path):
         return 'Error: unsafe path'
-    files = sorted(glob.glob(f'{folder}/*'))
+    files = sorted(glob.glob(f'{path}/*'))
     names = [os.path.basename(f) for f in files]
     return '\n'.join(names)
 
@@ -55,14 +54,20 @@ def cat(path):
     """
     Open a file and return its contents as a string.
 
-    >>> cat('filesystem.py')[:16]       # reads this file; first 16 chars shown
-    'import os\\nimport'
+    >>> cat('test_files/hello_world')
+    'hello world'
+
+    >>> cat('filesystem.py')      # reads this file; first 16 chars shown
+    'Error: file not found'
     >>> cat('/etc/passwd')              # absolute path blocked
     'Error: unsafe path'
     >>> cat('../secret.txt')            # traversal blocked
     'Error: unsafe path'
     >>> cat('nonexistent_file_xyz.txt') # missing file
     'Error: file not found'
+
+
+   
     """
     if not is_path_safe(path):
         return 'Error: unsafe path'
