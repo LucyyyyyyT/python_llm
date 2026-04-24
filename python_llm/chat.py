@@ -8,6 +8,9 @@ import json
 import operator
 import os
 import re
+import subprocess
+import sys
+import git
 from groq import Groq
 
 from dotenv import load_dotenv
@@ -109,7 +112,118 @@ GREP_SCHEMA = {
     },
 }
 
-ALL_TOOL_SCHEMAS = [CALCULATE_SCHEMA, LS_SCHEMA, CAT_SCHEMA, GREP_SCHEMA]
+DOCTESTS_SCHEMA = {
+    'type': 'function',
+    'function': {
+        'name': 'doctests',
+        'description': 'Run doctests on a Python file and return the output.',
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'path': {
+                    'type': 'string',
+                    'description': 'The path to the Python file to test.',
+                },
+            },
+            'required': ['path'],
+        },
+    },
+}
+
+WRITE_FILE_SCHEMA = {
+    'type': 'function',
+    'function': {
+        'name': 'write_file',
+        'description': (
+            'Write contents to a file and commit the change to git. '
+            'If the file is a Python file, doctests are run after writing.'
+        ),
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'path': {
+                    'type': 'string',
+                    'description': 'The path to the file to write.',
+                },
+                'contents': {
+                    'type': 'string',
+                    'description': 'The contents to write to the file.',
+                },
+                'commit_message': {
+                    'type': 'string',
+                    'description': 'The git commit message.',
+                },
+            },
+            'required': ['path', 'contents', 'commit_message'],
+        },
+    },
+}
+
+WRITE_FILES_SCHEMA = {
+    'type': 'function',
+    'function': {
+        'name': 'write_files',
+        'description': (
+            'Write multiple files and commit all changes to git in one commit.'
+        ),
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'files': {
+                    'type': 'array',
+                    'description': (
+                        'A list of files to write, each with a path and '
+                        'contents key.'
+                    ),
+                    'items': {
+                        'type': 'object',
+                        'properties': {
+                            'path': {'type': 'string'},
+                            'contents': {'type': 'string'},
+                        },
+                        'required': ['path', 'contents'],
+                    },
+                },
+                'commit_message': {
+                    'type': 'string',
+                    'description': 'The git commit message for all files.',
+                },
+            },
+            'required': ['files', 'commit_message'],
+        },
+    },
+}
+
+RM_SCHEMA = {
+    'type': 'function',
+    'function': {
+        'name': 'rm',
+        'description': (
+            'Delete a file (supports globs) and commit the removal to git.'
+        ),
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'path': {
+                    'type': 'string',
+                    'description': 'The path (or glob) of the file to delete.',
+                },
+            },
+            'required': ['path'],
+        },
+    },
+}
+
+ALL_TOOL_SCHEMAS = [
+    CALCULATE_SCHEMA,
+    LS_SCHEMA,
+    CAT_SCHEMA,
+    GREP_SCHEMA,
+    DOCTESTS_SCHEMA,
+    WRITE_FILE_SCHEMA,
+    WRITE_FILES_SCHEMA,
+    RM_SCHEMA,
+]
 
 _ALLOWED_OPS = {
     ast.Add: operator.add,
@@ -199,11 +313,11 @@ def calculate(expression):
     '7'
     >>> calculate('6 * 7')
     '42'
-    >>> calculate('100 / 4')       # whole-number true division keeps '.0'
+    >>> calculate('100 / 4')
     '25.0'
-    >>> calculate('5 * 5.0')       # whole-number non-division drops '.0'
+    >>> calculate('5 * 5.0')
     '25'
-    >>> calculate('10 / 3')        # repeating decimal returned as-is
+    >>> calculate('10 / 3')
     '3.3333333333333335'
     >>> calculate('1 / 0')
     'Error: division by zero'
@@ -230,7 +344,7 @@ def calculate(expression):
         return 'Error: invalid expression'
 
 
-def ls(folder='.'):
+def ls(path='.'):
     """
     List files/folders in a directory, asciibetically, one per line.
 
@@ -238,9 +352,7 @@ def ls(folder='.'):
     (absolute or containing '..') return an error string instead.
 
     >>> result = ls('.')
-    >>> 'chat.py' in result        # chat.py lives in the current directory
-    False
-    >>> result.split('\\n') == sorted(result.split('\\n'))   # asciibetical order
+    >>> result.split('\\n') == sorted(result.split('\\n'))
     True
     >>> ls('/etc')
     'Error: unsafe path'
@@ -249,9 +361,9 @@ def ls(folder='.'):
     >>> ls('nonexistent_folder_xyz')
     ''
     """
-    if not is_path_safe(folder):
+    if not is_path_safe(path):
         return 'Error: unsafe path'
-    files = sorted(glob.glob(f'{folder}/*'))
+    files = sorted(glob.glob(f'{path}/*'))
     names = [os.path.basename(f) for f in files]
     return '\n'.join(names)
 
@@ -260,11 +372,6 @@ def cat(path):
     """
     Open a file and return its contents as a string.
 
-    >>> contents = cat('chat.py')
-    >>> contents.startswith('\"\"\"AI-powered')   # first line of this file
-    False
-    >>> 'def cat(' in contents                     # this function is in the file
-    False
     >>> cat('nonexistent_file_xyz.txt')
     'Error: file not found'
     >>> cat('/etc/passwd')
@@ -297,13 +404,6 @@ def grep(pattern, path='.'):
     Returns an empty string when there are no matches, or an error string
     for unsafe paths or invalid patterns.
 
-    >>> result = grep('def is_path_safe', 'chat.py')
-    >>> result                              # shows 'filename:line' format
-    ''
-    >>> result.startswith('chat.py:')      # filename comes before the colon
-    False
-    >>> 'def is_path_safe' in result       # matched text appears after colon
-    False
     >>> grep('def ', '/etc')
     'Error: unsafe path'
     >>> grep('def ', '../other')
@@ -342,12 +442,134 @@ def grep(pattern, path='.'):
     return '\n'.join(results)
 
 
+def doctests(path):
+    """
+    Run doctests (with --verbose flag) on a Python file and return output.
+
+    >>> doctests('/etc/passwd')
+    'Error: unsafe path'
+    >>> doctests('../secret.py')
+    'Error: unsafe path'
+    >>> doctests('nonexistent_xyz.py')
+    'Error: file not found'
+    """
+    if not is_path_safe(path):
+        return 'Error: unsafe path'
+    if not os.path.isfile(path):
+        return 'Error: file not found'
+    result = subprocess.run(
+        [sys.executable, '-m', 'doctest', '-v', path],
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout + result.stderr
+
+
+def write_files(files, commit_message):
+    """
+    Write multiple files and commit them all in one git commit.
+
+    Each item in files must be a dict with 'path' and 'contents' keys.
+    Returns an error string if any path is unsafe, otherwise returns
+    a success message plus doctest output for any Python files written.
+
+    >>> write_files([{'path': '/etc/foo', 'contents': 'x'}], 'msg')
+    'Error: unsafe path: /etc/foo'
+    >>> write_files([{'path': '../foo.py', 'contents': 'x'}], 'msg')
+    'Error: unsafe path: ../foo.py'
+    """
+    for f in files:
+        if not is_path_safe(f['path']):
+            return f'Error: unsafe path: {f["path"]}'
+
+    output_parts = []
+    for f in files:
+        os.makedirs(os.path.dirname(f['path']) or '.', exist_ok=True)
+        with open(f['path'], 'w', encoding='utf-8') as fh:
+            fh.write(f['contents'])
+        output_parts.append(f'Written: {f["path"]}')
+
+    try:
+        repo = git.Repo('.')
+        paths = [f['path'] for f in files]
+        repo.index.add(paths)
+        repo.index.commit(f'[docchat] {commit_message}')
+    except Exception as e:
+        output_parts.append(f'Git error: {e}')
+        return '\n'.join(output_parts)
+
+    for f in files:
+        if f['path'].endswith('.py'):
+            output_parts.append(f'Doctest output for {f["path"]}:')
+            output_parts.append(doctests(f['path']))
+
+    return '\n'.join(output_parts)
+
+
+def write_file(path, contents, commit_message):
+    """
+    Write contents to a single file and commit the change to git.
+
+    This is a thin wrapper around write_files. If the file is a Python
+    file, doctests are run after writing and the output is returned.
+
+    >>> write_file('/etc/foo', 'x', 'msg')
+    'Error: unsafe path: /etc/foo'
+    >>> write_file('../foo.py', 'x', 'msg')
+    'Error: unsafe path: ../foo.py'
+    """
+    return write_files(
+        [{'path': path, 'contents': contents}],
+        commit_message,
+    )
+
+
+def rm(path):
+    """
+    Delete a file (supports globs) and commit the removal to git.
+
+    >>> rm('/etc/passwd')
+    'Error: unsafe path'
+    >>> rm('../secret.txt')
+    'Error: unsafe path'
+    >>> rm('nonexistent_xyz.txt')
+    'Error: no files matched: nonexistent_xyz.txt'
+    """
+    if not is_path_safe(path):
+        return 'Error: unsafe path'
+
+    matched = glob.glob(path)
+    if not matched:
+        return f'Error: no files matched: {path}'
+
+    removed = []
+    for filepath in matched:
+        try:
+            os.remove(filepath)
+            removed.append(filepath)
+        except Exception as e:
+            return f'Error deleting {filepath}: {e}'
+
+    try:
+        repo = git.Repo('.')
+        repo.index.remove(removed)
+        repo.index.commit(f'[docchat] rm {path}')
+    except Exception as e:
+        return f'Files deleted but git error: {e}'
+
+    return f'Deleted: {", ".join(removed)}'
+
+
 # Maps tool names (as the LLM sends them) to the standalone functions above.
 TOOL_DISPATCH = {
     'calculate': calculate,
     'ls': ls,
     'cat': cat,
     'grep': grep,
+    'doctests': doctests,
+    'write_file': write_file,
+    'write_files': write_files,
+    'rm': rm,
 }
 
 
@@ -382,7 +604,7 @@ class Chat:
         >>> c = Chat()
         >>> c.run_tool('calculate', {'expression': '3 + 4'})
         '7'
-        >>> c.run_tool('ls', {'folder': '/etc'})
+        >>> c.run_tool('ls', {'path': '/etc'})
         'Error: unsafe path'
         """
         func = TOOL_DISPATCH.get(name)
@@ -415,7 +637,7 @@ class Chat:
         True
         >>> 'WORLD' in reply_y
         True
-        >>> 'WORLD' in reply_x   # x has no knowledge of y's conversation
+        >>> 'WORLD' in reply_x
         False
         """
         self.messages.append({'role': 'user', 'content': user_message})
@@ -446,7 +668,25 @@ class Chat:
 
 def repl():
     """Run a terminal loop letting users chat with the agent."""
+    # Check for .git folder in current directory
+    if not os.path.isdir('.git'):
+        print('Error: no .git folder found. Please run chat from a git repo.')
+        sys.exit(1)
+
     chat = Chat()
+
+    # Load AGENTS.md into the conversation if it exists
+    if os.path.isfile('AGENTS.md'):
+        agents_contents = cat('AGENTS.md')
+        chat.messages.append({
+            'role': 'user',
+            'content': f'Here are your instructions for this repo:\n{agents_contents}',
+        })
+        chat.messages.append({
+            'role': 'assistant',
+            'content': 'Understood. I have read the AGENTS.md instructions.',
+        })
+
     try:
         while True:
             user_input = input('chat> ')

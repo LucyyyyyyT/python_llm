@@ -33,4 +33,22 @@ chat> tell me about this project
 The README says this project is designed to scrape product information off of ebay.
 chat> is this legal?
 Yes. It is generally legal to scrape webpages, but ebay offers an API that would be more efficient to use.
+
+### Creating files with the agent
+The session below demonstrates that the agent can create files and
+automatically commit them to git.
+
+$ ls -a
+.git  README.md  python_llm/
+$ git log --oneline
+835b796 chat.py
+$ python3 python_llm/chat.py
+chat> create a file called hello.py that prints "hello world"
+I've created hello.py with a simple print statement.
+chat> ^C
+$ ls -a
+.git  README.md  hello.py  python_llm/
+$ git log --oneline
+f01358c (HEAD -> project4) [docchat] Add hello.py that prints hello world
+835b796 chat.py
 ```
