@@ -30,17 +30,25 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest coverage codecov
-          pip install -e .
 
       # 4️⃣ Run tests with coverage
       - name: Run tests and collect coverage
         run: |
-          pip install pytest pytest-cov
-          pytest --cov=python_llm --cov-branch --cov-report=xml
+          coverage run -m pytest --doctest-modules python_llm/ && coverage report -m
+          COVERAGE_PERCENT=$(coverage report | tail -1 | awk '{print $NF}' | sed 's/%//')
+          echo "Coverage: $COVERAGE_PERCENT%"
+          if [ $COVERAGE_PERCENT -ge 90 ]; then
+            echo "status=passed" >> $GITHUB_ENV
+          else
+            echo "status=failed" >> $GITHUB_ENV
+          fi
 
-      # 5️⃣ Upload to Codecov
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage.xml
+      - name: Create coverage badge
+        run: |
+          if [ "$status" = "passed" ]; then
+            COLOR="brightgreen"
+          else
+            COLOR="red"
+          fi
+          echo "https://img.shields.io/badge/coverage-$status-$COLOR" > badge_url.txt
+        shell: bash
