@@ -36,7 +36,11 @@ def grep(pattern, path='.'):
     'test_grep_dir/file1.txt:search target'
 
     >>> result = grep('target', 'test_grep_dir').replace('\\\\', '/')
-    >>> result.split('\\n') == ['test_grep_dir/file1.txt:search target', 'test_grep_dir/subdir/file2.txt:another search target here']
+    >>> expected = [
+    ...     'test_grep_dir/file1.txt:search target',
+    ...     'test_grep_dir/subdir/file2.txt:another search target here'
+    ... ]
+    >>> result.split('\\n') == expected    
     True
 
     >>> 'test_grep_dir/file1.txt:search target' in grep('search target').replace('\\\\', '/')
