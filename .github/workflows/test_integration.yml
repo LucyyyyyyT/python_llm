@@ -17,7 +17,7 @@ jobs:
           pip install python-llm-lucy
           pip install -r requirements.txt
       - run: |
-          python python_llm/chat.py << 'EOF'
+          python -m python_llm.chat << 'EOF'
           I am bob.
           What is my name?
           EOF
