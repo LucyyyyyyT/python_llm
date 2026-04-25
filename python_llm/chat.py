@@ -8,11 +8,13 @@ import json
 import operator
 import os
 import re
+import subprocess
+import sys
 from groq import Groq
 
-from .tools.calculator import calculate
-from .tools.filesystem import ls, cat
-from .tools.search import grep
+from python_llm.tools.calculator import calculate
+from python_llm.tools.filesystem import ls, cat, doctests, write_file, write_files, rm
+from python_llm.tools.search import grep
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -113,94 +115,290 @@ GREP_SCHEMA = {
     },
 }
 
-ALL_TOOL_SCHEMAS = [CALCULATE_SCHEMA, LS_SCHEMA, CAT_SCHEMA, GREP_SCHEMA]
+DOCTESTS_SCHEMA = {
+    'type': 'function',
+    'function': {
+        'name': 'doctests',
+        'description': 'Run doctests on a Python file and return the output.',
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'path': {
+                    'type': 'string',
+                    'description': 'The path to the Python file to test.',
+                },
+            },
+            'required': ['path'],
+        },
+    },
+}
+
+WRITE_FILE_SCHEMA = {
+    'type': 'function',
+    'function': {
+        'name': 'write_file',
+        'description': (
+            'Write contents to a file and commit the change to git. '
+            'If the file is a Python file, doctests are run after writing.'
+        ),
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'path': {
+                    'type': 'string',
+                    'description': 'The path to the file to write.',
+                },
+                'contents': {
+                    'type': 'string',
+                    'description': 'The contents to write to the file.',
+                },
+                'commit_message': {
+                    'type': 'string',
+                    'description': 'The git commit message.',
+                },
+            },
+            'required': ['path', 'contents', 'commit_message'],
+        },
+    },
+}
+
+WRITE_FILES_SCHEMA = {
+    'type': 'function',
+    'function': {
+        'name': 'write_files',
+        'description': (
+            'Write multiple files and commit all changes to git in one commit.'
+        ),
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'files': {
+                    'type': 'array',
+                    'description': (
+                        'A list of files to write, each with a path and '
+                        'contents key.'
+                    ),
+                    'items': {
+                        'type': 'object',
+                        'properties': {
+                            'path': {'type': 'string'},
+                            'contents': {'type': 'string'},
+                        },
+                        'required': ['path', 'contents'],
+                    },
+                },
+                'commit_message': {
+                    'type': 'string',
+                    'description': 'The git commit message for all files.',
+                },
+            },
+            'required': ['files', 'commit_message'],
+        },
+    },
+}
+
+RM_SCHEMA = {
+    'type': 'function',
+    'function': {
+        'name': 'rm',
+        'description': (
+            'Delete a file (supports globs) and commit the removal to git.'
+        ),
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'path': {
+                    'type': 'string',
+                    'description': 'The path (or glob) of the file to delete.',
+                },
+            },
+            'required': ['path'],
+        },
+    },
+}
+
+ALL_TOOL_SCHEMAS = [
+    CALCULATE_SCHEMA,
+    LS_SCHEMA,
+    CAT_SCHEMA,
+    GREP_SCHEMA,
+    DOCTESTS_SCHEMA,
+    WRITE_FILE_SCHEMA,
+    WRITE_FILES_SCHEMA,
+    RM_SCHEMA,
+]
 
 
-# in pytohn class names are in CamelCase;
-# non-class names (e.g. functions/variables) are in snake_case
+# Maps tool names (as the LLM sends them) to the standalone functions above.
+TOOL_DISPATCH = {
+    'calculate': calculate,
+    'ls': ls,
+    'cat': cat,
+    'grep': grep,
+    'doctests': doctests,
+    'write_file': write_file,
+    'write_files': write_files,
+    'rm': rm,
+}
 
 
 class Chat:
-    '''
-    A chat agent that talks with an LLM and helsp with tool usage.
-    The Chat class stores talking history and allows messages to be sent
-    to an LLM. It also supports tool calling (ls, cat, grep, calculate)
-    by structured tool definitions.
+    """
+    A chat agent that talks with an LLM and supports tool usage.
 
-    >>> chat = Chat()
-    >>> chat.send_message(
-    ...     'my name is bob. say hey then my name', temperature=0.0)
-    'Hey, Bob!'
-    >>> chat.send_message('what is my name? just say my name', temperature=0.0)
-    'Bob.'
+    Stores conversation history so that follow-up questions work correctly.
+    Each Chat instance is fully independent — two instances never share history.
 
-    'I don’t have any information about your name. If you’d like me to address you a certain way, just let me know!'
-    '''
-    client = Groq()
+    >>> a = Chat()
+    >>> b = Chat()
+    >>> _ = a.send_message('My name is Alice. Just say OK.', temperature=0.0)
+    >>> _ = b.send_message('My name is Bob. Just say OK.', temperature=0.0)
+    >>> 'Alice' in a.send_message('What is my name? Say only my name.', temperature=0.0)
+    True
+    >>> 'Bob' in b.send_message('What is my name? Say only my name.', temperature=0.0)
+    True
+    >>> 'Alice' not in b.send_message('What is my name? Say only my name.', temperature=0.0)
+    True
+    """
 
     def __init__(self):
-        """Initializes the chat history with a system prompt that enforces a pirate persona."""
+        """Initialize a new, empty conversation with the LLM."""
+        """
+        Initialize a new, empty conversation with the LLM.
+
+        # Setup: Mock the Groq class to avoid requiring a real API key during tests
+        >>> from unittest.mock import MagicMock
+        >>> original_groq = globals().get('Groq')  # Save original import if it exists
+        >>> globals()['Groq'] = MagicMock()        # Inject the mock
+
+        # 1. Test instantiation
+        >>> chat = YourClassName()
+        
+        # 2. Verify the messages array starts empty
+        >>> chat.messages
+        []
+        
+        # 3. Verify the Groq client was successfully instantiated (as our mock)
+        >>> isinstance(chat.client, MagicMock)
+        True
+
+        # Cleanup: Restore the original Groq class so other code isn't affected
+        >>> if original_groq:
+        ...     globals()['Groq'] = original_groq
+        >>> else:
+        ...     del globals()['Groq']
+        """
         self.client = Groq()
         self.messages = []
-        self.tool_dispatch = {
-            'calculate': calculate,
-            'ls': ls,
-            'cat': cat,
-            'grep': grep
-        }
 
-        def run_tool(self, name, args):
-            """Dispatch a tool call by name."""
-            if name == 'ls':
-                folder = args.get('path', args.get('folder', '.'))
-                return str(ls(folder))
-            if name in self.tool_dispatch:
-                return str(self.tool_dispatch[name](**args))
-            return f"Unknown tool: {name}"
-        
-        def ls(self, folder='.'):
-            """Wrapper for ls tool."""
-            return ls(folder)
+    def run_tool(self, name, args):
+        """
+        Dispatch a tool call by name and return its string result.
 
-        def cat(self, path):
-            """Wrapper for cat tool."""
-            return cat(path)
+        >>> c = Chat()
+        >>> c.run_tool('calculate', {'expression': '3 + 4'})
+        '7'
+        >>> c.run_tool('ls', {'path': '/etc'})
+        'Error: unsafe path'
 
-        def grep(self, pattern, path='.'):
-            """Wrapper for grep tool."""
-            return grep(pattern, path)
-        
-        # in order to make non-deterministic code deterministic;
-        # in general very hard CS problem;
-        # in this case, has a "temperature" param that controls randomness;
-        # the higher the value, the more randomness;
-        # hihgher temperature => more creativity
+        # Test handling of an unregistered or hallucinated tool name
+        >>> c.run_tool('nonexistent_tool_xyz', {})
+        "Error: unknown tool 'nonexistent_tool_xyz'"
+        """
+        func = TOOL_DISPATCH.get(name)
+        if func is None:
+            return f'Error: unknown tool {name!r}'
+        return func(**args)
 
     def send_message(self, user_message, temperature=0.0):
         """
-        Sends a user message to the AI model and returns the response.
+        Send a message and return the assistant's reply.
 
-        Each Chat() instance maintains its own independent conversation history.
+        Handles multi-turn conversation: history is preserved between calls,
+        so the model can refer back to earlier messages.
 
         >>> a = Chat()
-        >>> b = Chat()
-        >>> _ = a.send_message('My name is Alice. Just say ok.')
-        >>> _ = b.send_message('My name is Bob. Just say ok.')
-        >>> 'Alice' in a.send_message('What is my name? Just say my name.')
+        >>> _ = a.send_message('Remember: the magic number is 42. Just say OK.')
+        >>> reply = a.send_message('What is the magic number? Say only the number.')
+        >>> '42' in reply
         True
-        >>> 'Bob' in b.send_message('What is my name? Just say my name.')
-        True
-        >>> 'HELLO' in a.send_message('Say only the word HELLO and nothing else.')
-        True
-        """
 
+        Two separate Chat instances are completely independent:
+
+        >>> x = Chat()
+        >>> y = Chat()
+        >>> _ = x.send_message('Say only the word HELLO and nothing else.')
+        >>> _ = y.send_message('Say only the word WORLD and nothing else.')
+        >>> reply_x = x.send_message('Repeat the word you just said.')
+        >>> reply_y = y.send_message('Repeat the word you just said.')
+        >>> 'HELLO' in reply_x
+        True
+        >>> 'WORLD' in reply_y
+        True
+        >>> 'WORLD' in reply_x
+        False
+
+        # --- NEW TESTS ADDED BELOW ---
+
+        # Setup: Mock the LLM client to test the tool-calling loop deterministically
+        >>> from unittest.mock import MagicMock
+        >>> import json
+        >>> c = Chat()
+        >>> c.client = MagicMock()
+
+        # 1. Test the tool calling while-loop
+        # Create mock response A: The LLM decides to call a tool
+        >>> tc = MagicMock()
+        >>> tc.id = 'call_abc123'
+        >>> tc.function.name = 'calculate'
+        >>> tc.function.arguments = '{"expression": "5 + 5"}'
+        >>> msg_tool = MagicMock()
+        >>> msg_tool.tool_calls = [tc]
+        >>> msg_tool.content = None
+        >>> resp1 = MagicMock()
+        >>> resp1.choices = [MagicMock(message=msg_tool)]
+
+        # Create mock response B: The LLM replies with the final text
+        >>> msg_text = MagicMock()
+        >>> msg_text.tool_calls = None
+        >>> msg_text.content = 'The answer is 10.'
+        >>> resp2 = MagicMock()
+        >>> resp2.choices = [MagicMock(message=msg_text)]
+
+        # Assign the sequence of responses to the mock client
+        >>> c.client.chat.completions.create.side_effect = [resp1, resp2]
+
+        # Execute the method; it should run the tool and loop back for the final text
+        >>> c.send_message('What is 5 + 5?')
+        'The answer is 10.'
+        
+        # Verify the message history correctly recorded all 4 steps:
+        # [User prompt, LLM tool request, Tool result, Final LLM reply]
+        >>> len(c.messages)
+        4
+        >>> c.messages[2]['role']
+        'tool'
+        >>> c.messages[2]['content']
+        '10'
+
+        # 2. Test the empty content fallback logic (msg.content or '')
+        >>> msg_empty = MagicMock()
+        >>> msg_empty.tool_calls = None
+        >>> msg_empty.content = None
+        >>> resp3 = MagicMock()
+        >>> resp3.choices = [MagicMock(message=msg_empty)]
+        >>> c.client.chat.completions.create.side_effect = [resp3]
+        
+        >>> c.send_message('Say nothing.')
+        ''
+        """
         self.messages.append({'role': 'user', 'content': user_message})
         while True:
             response = self.client.chat.completions.create(
                 model=MODEL,
                 messages=self.messages,
                 tools=ALL_TOOL_SCHEMAS,
-                temperature=temperature
+                temperature=temperature,
             )
             msg = response.choices[0].message
 
@@ -220,70 +418,134 @@ class Chat:
                 return content
 
 
-    def repl(self):
-        '''
-        Runs a terminal-based loop allowing users to interact with the chat interface.
-        '''
-        while True:
-            try:
-                user_input = input('chat> ')
-            except (KeyboardInterrupt, EOFError):
-                print()
-                break
+def repl():
+    """
+    Run a terminal loop letting users chat with the agent.
 
-            if not user_input:
-                continue
+    >>> import os, sys, builtins
+    >>> original_isdir = os.path.isdir
+    >>> original_isfile = os.path.isfile
+    >>> original_input = builtins.input
+    >>> original_chat = globals().get('Chat')
+
+    >>> os.path.isdir = lambda path: False
+    >>> try:
+    ...     repl()
+    ... except SystemExit as e:
+    ...     print(f'Exit code: {e.code}')
+    Error: no .git folder found. Please run chat from a git repo.
+    Exit code: 1
+
+    >>> os.path.isdir = lambda path: True
+    >>> os.path.isfile = lambda path: False
+    >>> class StubChat:
+    ...     def __init__(self):
+    ...         self.messages = []
+    ...     def send_message(self, text, temperature=0.0):
+    ...         return "I hear you."
+    >>> globals()['Chat'] = StubChat
+    >>> input_sequence = ['Hello agent!', EOFError()]
+    >>> def fake_input(prompt):
+    ...     val = input_sequence.pop(0)
+    ...     if isinstance(val, Exception):
+    ...         raise val
+    ...     return val
+    >>> builtins.input = fake_input
+    >>> repl() 
+    Hello! How can I assist you today?
+    <BLANKLINE>
+
+    >>> os.path.isdir = original_isdir
+    >>> os.path.isfile = original_isfile
+    >>> builtins.input = original_input
+    >>> globals()['Chat'] = original_chat
+
+    >>> input_sequence = ['/help', '/ls .', '/calculate 2+2', '/grep def chat.py', '/unknown', EOFError()]
+    >>> def fake_input(prompt):
+    ...     val = input_sequence.pop(0)
+    ...     if isinstance(val, Exception):
+    ...         raise val
+    ...     return val
+    >>> builtins.input = fake_input
+    >>> repl()  # doctest: +ELLIPSIS
+    Slash commands:
+      /ls [path]
+    ...
+    <BLANKLINE>
+    """
+    # Check for .git folder in current directory
+    if not os.path.isdir('.git'):
+        print('Error: no .git folder found. Please run chat from a git repo.')
+        sys.exit(1)
+
+    chat = Chat()
+
+    # Load AGENTS.md into the conversation if it exists
+    if os.path.isfile('AGENTS.md'):
+        agents_contents = cat('AGENTS.md')
+        chat.messages.append({
+            'role': 'user',
+            'content': f'Here are your instructions for this repo:\n{agents_contents}',
+        })
+        chat.messages.append({
+            'role': 'assistant',
+            'content': 'Understood. I have read the AGENTS.md instructions.',
+        })
+
+    try:
+        while True:
+            user_input = input('chat> ')
 
             if user_input.startswith('/'):
-                parts = user_input[1:].split()
-                if not parts:
-                    continue
-                tool = parts[0]
-                args_l = parts[1:]
+                parts = user_input[1:].split(None, 1)
+                cmd = parts[0]
+                arg = parts[1] if len(parts) > 1 else ''
 
-                if tool == 'ls':
-                    kargs = {'path': args_l[0]} if args_l else {}
-                elif tool == 'cat':
-                    kargs = {'path': args_l[0]} if args_l else {}
-                elif tool == 'grep':
-                    if len(args_l) >= 2:
-                        kargs = {'pattern': args_l[0], 'path': args_l[1]}
-                    elif len(args_l) == 1:
-                        kargs = {'pattern': args_l[0], 'path': '.'}
+                if cmd == 'ls':
+                    print(ls(arg or '.'))
+                elif cmd == 'cat':
+                    print(cat(arg))
+                elif cmd == 'grep':
+                    s_parts = arg.split(None, 1)
+                    if len(s_parts) < 1:
+                        print('Error: /grep <pattern> [path]')
                     else:
-                        print('Error: /grep <pattern> <path>')
-                        continue
-                elif tool == 'calculate':
-                    kargs = {'expression': ' '.join(args_l)}
+                        pattern = s_parts[0]
+                        path = s_parts[1] if len(s_parts) > 1 else '.'
+                        print(grep(pattern, path))
+                elif cmd == 'calculate':
+                    print(calculate(arg))
+                elif cmd == 'doctests':
+                    print(doctests(arg))
+                elif cmd == 'write_file':
+                    subparts = arg.split(None, 1)  # use its own variable
+                    if len(subparts) < 2:
+                        print('Error: /write_file <path> <contents>')
+                    else:
+                        print(write_file(subparts[0], subparts[1], 'write via slash command'))
+                elif cmd == 'rm':
+                    print(rm(arg))
+                elif cmd == 'help':
+                    print(
+                        'Slash commands:\n'
+                        '  /ls [path]\n'
+                        '  /cat <path>\n'
+                        '  /grep <pattern> [path]\n'
+                        '  /calculate <expression>\n'
+                        '  /doctests <path>\n'
+                        '  /write_file <path> <contents>\n'
+                        '  /rm <path>\n'
+                        '  /help'
+                    )
                 else:
-                    print(f"Error command: {tool}")
-                    continue
+                    print(f"Unknown command '/{cmd}.' Type /help for a list.")
+                continue
 
-                result = self.run_tool(tool, kargs)
-                print(result)
 
-                self.messages.append({
-                    'role': 'user',
-                    'content': (
-                        f'[manual command] /{tool} '
-                        f'{" ".join(args_l)}\nOutput:\n{result}'
-                    )
-                })
-                self.messages.append({
-                    'role': 'assistant',
-                    'content': (
-                        f'I ran /{tool} {" ".join(args_l)} '
-                        f'and got: \n{result}'
-                    )
-                })
+            response = chat.send_message(user_input, temperature=0.0)
+            print(response)
+    except (KeyboardInterrupt, EOFError):
+        print()
 
-            else:
-                response = self.send_message(user_input)
-                print(response)
-
-def repl():
-    """Entry point for the chat command."""
-    Chat().repl()
-
-if __name__ == '__main__':
-    Chat().repl()
+if __name__ == "__main__":
+    repl()
