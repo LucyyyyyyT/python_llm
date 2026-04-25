@@ -21,3 +21,8 @@ dependencies = [
 chat = "chat:repl"
 [tool.flake8]
 max-line-length = 120
+
+[tool.pytest.ini_options]
+addopts = "--doctest-modules"
+testpaths = ["tests", "python_llm"]
+norecursedirs = [".git", ".venv", "build", "dist"]
