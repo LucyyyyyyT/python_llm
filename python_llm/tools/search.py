@@ -22,6 +22,11 @@ def grep(pattern, path='.'):
     >>> grep('[invalid', 'chat.py')
     'Error: invalid pattern: unterminated character set at position 0'
 
+    >>> import shutil
+    >>> _orig_dir = os.getcwd()
+    >>> os.chdir(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    >>> if os.path.exists('test_grep_dir'):
+    ...     shutil.rmtree('test_grep_dir')
     >>> os.mkdir('test_grep_dir')
     >>> with open('test_grep_dir/file1.txt', 'w', encoding='utf-8') as f:
     ...     _ = f.write('hello\\nsearch target\\nworld')
@@ -40,7 +45,7 @@ def grep(pattern, path='.'):
     ...     'test_grep_dir/file1.txt:search target',
     ...     'test_grep_dir/subdir/file2.txt:another search target here'
     ... ]
-    >>> result.split('\\n') == expected    
+    >>> result.split('\\n') == expected
     True
 
     >>> 'test_grep_dir/file1.txt:search target' in grep('search target').replace('\\\\', '/')
@@ -52,6 +57,7 @@ def grep(pattern, path='.'):
     >>> os.remove('test_grep_dir/.hidden/file3.txt')
     >>> os.rmdir('test_grep_dir/.hidden')
     >>> os.rmdir('test_grep_dir')
+    >>> os.chdir(_orig_dir)
     """
     if not is_path_safe(path):
         return 'Error: unsafe path'
