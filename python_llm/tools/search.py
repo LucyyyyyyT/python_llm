@@ -1,6 +1,9 @@
+"""Search tool for grepping files and directories."""
 import os
 import re
+
 from python_llm.tools.filesystem import is_path_safe
+
 
 def grep(pattern, path='.'):
     """
@@ -19,9 +22,6 @@ def grep(pattern, path='.'):
     >>> grep('[invalid', 'chat.py')
     'Error: invalid pattern: unterminated character set at position 0'
 
-    # --- NEW TESTS ADDED BELOW ---
-
-    # Setup: Create a temporary directory structure for testing
     >>> os.mkdir('test_grep_dir')
     >>> with open('test_grep_dir/file1.txt', 'w', encoding='utf-8') as f:
     ...     _ = f.write('hello\\nsearch target\\nworld')
@@ -32,23 +32,19 @@ def grep(pattern, path='.'):
     >>> with open('test_grep_dir/.hidden/file3.txt', 'w', encoding='utf-8') as f:
     ...     _ = f.write('search target hidden')
 
-    # 1. Test single file match and correct formatting
-    # Note: We replace backslashes to ensure Windows/Linux cross-compatibility in the test
     >>> grep('target', 'test_grep_dir/file1.txt').replace('\\\\', '/')
     'test_grep_dir/file1.txt:search target'
 
-    # 2. Test directory recursion and hidden directory filtering
-    # Should find file1 and file2, but skip file3 because it is in a '.hidden' folder
     >>> result = grep('target', 'test_grep_dir').replace('\\\\', '/')
-    >>> result.split('\\n') == ['test_grep_dir/file1.txt:search target', 'test_grep_dir/subdir/file2.txt:another search target here']
-    True
+    >>> expected = [
+    ...     'test_grep_dir/file1.txt:search target',
+    ...     'test_grep_dir/subdir/file2.txt:another search target here'
+    ... ]
+    >>> result.split('\\n') == expected    True
 
-    # 3. Test default path argument (searches current directory '.')
-    # We check if it successfully finds the test file we just generated
     >>> 'test_grep_dir/file1.txt:search target' in grep('search target').replace('\\\\', '/')
     True
 
-    # Cleanup: Remove the temporary files and directories
     >>> os.remove('test_grep_dir/file1.txt')
     >>> os.remove('test_grep_dir/subdir/file2.txt')
     >>> os.rmdir('test_grep_dir/subdir')
