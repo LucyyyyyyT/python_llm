@@ -1,3 +1,4 @@
+"""Calculator tool for evaluating arithmetic expressions."""
 import ast
 import operator
 
@@ -13,51 +14,40 @@ _ALLOWED_OPS = {
     ast.FloorDiv: operator.floordiv,
 }
 
+
 def _eval_node(node):
     """
     Recursively evaluate a single AST node.
 
     Raises ValueError for unsafe expressions.
 
-    --- CONSTANT PATHS ---
-    1. Valid integer Constant
     >>> _eval_node(ast.parse('42', mode='eval').body)
     42
-    
-    2. Valid float Constant
+
     >>> _eval_node(ast.parse('3.14', mode='eval').body)
     3.14
-    
-    3. Invalid Constant (e.g., string)
+
     >>> _eval_node(ast.parse('"hello"', mode='eval').body)
     Traceback (most recent call last):
         ...
     ValueError: invalid expression
 
-    --- BINOP PATHS ---
-    4. Valid BinOp (Addition)
     >>> _eval_node(ast.parse('10 + 5', mode='eval').body)
     15
-    
-    5. Invalid BinOp (Bitwise OR - not in _ALLOWED_OPS)
+
     >>> _eval_node(ast.parse('3 | 7', mode='eval').body)
     Traceback (most recent call last):
         ...
     ValueError: invalid expression
 
-    --- UNARYOP PATHS ---
-    6. Valid UnaryOp (Negation)
     >>> _eval_node(ast.parse('-5', mode='eval').body)
     -5
-    
-    7. Invalid UnaryOp (Bitwise Inversion - not in _ALLOWED_OPS)
+
     >>> _eval_node(ast.parse('~5', mode='eval').body)
     Traceback (most recent call last):
         ...
     ValueError: invalid expression
 
-    --- CATCH-ALL ELSE PATH ---
-    8. Unsupported Node Type (e.g., List)
     >>> _eval_node(ast.parse('[1, 2, 3]', mode='eval').body)
     Traceback (most recent call last):
         ...
@@ -82,6 +72,7 @@ def _eval_node(node):
         return _ALLOWED_OPS[op_type](operand)
     else:
         raise ValueError('invalid expression')
+
 
 def calculate(expression):
     """
@@ -111,9 +102,6 @@ def calculate(expression):
     'Error: invalid expression'
     >>> calculate('None + 1')
     'Error: invalid expression'
-    
-    # Tests the floor division exclusion branch ('//' not in expression)
-    # 10.0 // 2 evaluates to the float 5.0, but should be formatted as '5'
     >>> calculate('10.0 // 2')
     '5'
     """
