@@ -12,10 +12,22 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.8"
 
+`gitpython` isn't installed in the environment running your tests. Fix it:
+
+```bash
+pip install gitpython
+```
+
+Then add it to your `pyproject.toml` dependencies so it's always installed:
+
+```toml
+
 dependencies = [
-    "requests",
-    "groq"
+  "requests",
+  "groq",
+  "gitpython"
 ]
+```
 
 [project.scripts]
 chat = "python_llm.chat:repl"
