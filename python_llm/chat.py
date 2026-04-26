@@ -8,7 +8,7 @@ import sys
 from groq import Groq
 
 from python_llm.tools.calculator import calculate
-from python_llm.tools.filesystem import ls, cat, doctests, write_file, write_files, rm
+from python_llm.tools.filesystem import ls, cat, doctests, write_file, write_files, rm, pip_install
 from python_llm.tools.search import grep
 
 from dotenv import load_dotenv
@@ -221,6 +221,7 @@ ALL_TOOL_SCHEMAS = [
     WRITE_FILE_SCHEMA,
     WRITE_FILES_SCHEMA,
     RM_SCHEMA,
+    PIP_INSTALL_SCHEMA,
 ]
 
 
@@ -234,6 +235,7 @@ TOOL_DISPATCH = {
     'write_file': write_file,
     'write_files': write_files,
     'rm': rm,
+    'pip_install': pip_install,
 }
 
 
@@ -544,3 +546,21 @@ def repl():
 
 if __name__ == "__main__":
     repl()
+
+PIP_INSTALL_SCHEMA = {
+    'type': 'function',
+    'function': {
+        'name': 'pip_install',
+        'description': 'Install a Python library using pip.',
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'library_name': {
+                    'type': 'string',
+                    'description': 'The name of the library to install.',
+                },
+            },
+            'required': ['library_name'],
+        },
+    },
+}
