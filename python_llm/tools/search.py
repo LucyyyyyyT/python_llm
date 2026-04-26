@@ -2,6 +2,7 @@ import os
 import re
 from python_llm.tools.filesystem import is_path_safe
 
+
 def grep(pattern, path='.'):
     """
     Search for lines matching a regex pattern (recursive).
@@ -40,7 +41,10 @@ def grep(pattern, path='.'):
     # 2. Test directory recursion and hidden directory filtering
     # Should find file1 and file2, but skip file3 because it is in a '.hidden' folder
     >>> result = grep('target', 'test_grep_dir').replace('\\\\', '/')
-    >>> result.split('\\n') == ['test_grep_dir/file1.txt:search target', 'test_grep_dir/subdir/file2.txt:another search target here']
+    >>> result.split('\\n') == [
+    ...     'test_grep_dir/file1.txt:search target',
+    ...     'test_grep_dir/subdir/file2.txt:another search target here',
+    ... ]
     True
 
     # 3. Test default path argument (searches current directory '.')

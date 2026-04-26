@@ -4,6 +4,7 @@ import subprocess
 import sys
 import git
 
+
 def is_path_safe(path):
     """
     Returns True if a path is safe to read.
@@ -49,11 +50,11 @@ def ls(path='.'):
     'Error: unsafe path'
     >>> ls('nonexistent_folder_xyz')
     ''
-    
+
     # Tests the default argument fallback
     >>> ls() == ls('.')
     True
-    
+
     >>> '/' not in ls()
     True
     """
@@ -62,6 +63,7 @@ def ls(path='.'):
     files = sorted(glob.glob(f'{path}/*'))
     names = [os.path.basename(f) for f in files]
     return '\n'.join(names)
+
 
 def cat(path):
     """
@@ -73,22 +75,22 @@ def cat(path):
     'Error: unsafe path'
     >>> cat('../secret.txt')
     'Error: unsafe path'
-    
+
     # 1. Test standard UTF-8 success
     >>> with open('test_cat_utf8.txt', 'w', encoding='utf-8') as f:
     ...     _ = f.write('hello world')
     >>> cat('test_cat_utf8.txt')
     'hello world'
-    
+
     # 2. Test UnicodeDecodeError fallback to UTF-16 success
     >>> with open('test_cat_utf16.txt', 'w', encoding='utf-16') as f:
     ...     _ = f.write('hello utf16')
     >>> cat('test_cat_utf16.txt')
     'hello utf16'
-    
+
     # 3. Test complete decode failure (invalid binary data)
     >>> with open('test_cat_binary.bin', 'wb') as f:
-    ...     _ = f.write(b'\\x80\\x81\\xff') 
+    ...     _ = f.write(b'\\x80\\x81\\xff')
     >>> cat('test_cat_binary.bin')
     'Error: cannot decode file'
 
@@ -118,9 +120,9 @@ def cat(path):
             return 'Error: cannot decode file'
     except Exception as e:
         return f'Error: {e}'
-    
 
-######## PROJECT 4 ##########
+
+# PROJECT 4
 def doctests(path):
     """
     Run doctests (with --verbose flag) on a Python file and return output.

@@ -2,13 +2,8 @@
 
 Lets users query files using natural language and shell-like commands.
 """
-import ast
-import glob
 import json
-import operator
 import os
-import re
-import subprocess
 import sys
 from groq import Groq
 
@@ -273,11 +268,11 @@ class Chat:
 
         # 1. Test instantiation
         >>> chat = YourClassName()
-        
+
         # 2. Verify the messages array starts empty
         >>> chat.messages
         []
-        
+
         # 3. Verify the Groq client was successfully instantiated (as our mock)
         >>> isinstance(chat.client, MagicMock)
         True
@@ -371,7 +366,7 @@ class Chat:
         # Execute the method; it should run the tool and loop back for the final text
         >>> c.send_message('What is 5 + 5?')
         'The answer is 10.'
-        
+
         # Verify the message history correctly recorded all 4 steps:
         # [User prompt, LLM tool request, Tool result, Final LLM reply]
         >>> len(c.messages)
@@ -388,7 +383,7 @@ class Chat:
         >>> resp3 = MagicMock()
         >>> resp3.choices = [MagicMock(message=msg_empty)]
         >>> c.client.chat.completions.create.side_effect = [resp3]
-        
+
         >>> c.send_message('Say nothing.')
         ''
         """
@@ -451,7 +446,7 @@ def repl():
     ...         raise val
     ...     return val
     >>> builtins.input = fake_input
-    >>> repl() 
+    >>> repl()
     Hello! How can I assist you today?
     <BLANKLINE>
 
@@ -541,11 +536,11 @@ def repl():
                     print(f"Unknown command '/{cmd}.' Type /help for a list.")
                 continue
 
-
             response = chat.send_message(user_input, temperature=0.0)
             print(response)
     except (KeyboardInterrupt, EOFError):
         print()
+
 
 if __name__ == "__main__":
     repl()
