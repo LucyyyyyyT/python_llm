@@ -29,12 +29,8 @@ jobs:
 
       - name: Run tests and collect coverage
         run: |
-<<<<<<< HEAD
           coverage run -m pytest --doctest-modules python_llm/ && coverage report -m
-=======
-          coverage run -m pytest --doctest-modules python_llm/
-          coverage report -m
->>>>>>> origin/main
+
           COVERAGE_PERCENT=$(coverage report | tail -1 | awk '{print $NF}' | sed 's/%//')
           if [ "$COVERAGE_PERCENT" -ge 90 ]; then
             COLOR="brightgreen"

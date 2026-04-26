@@ -2,13 +2,13 @@
 
 Lets users query files using natural language and shell-like commands.
 """
+import ast
+import glob
 import json
+import operator
 import os
-<<<<<<< HEAD
 import re
 import subprocess
-=======
->>>>>>> origin/main
 import sys
 from groq import Groq
 
@@ -263,7 +263,6 @@ class Chat:
 
     def __init__(self):
         """Initialize a new, empty conversation with the LLM."""
-<<<<<<< HEAD
         """
         Initialize a new, empty conversation with the LLM.
 
@@ -289,8 +288,6 @@ class Chat:
         >>> else:
         ...     del globals()['Groq']
         """
-=======
->>>>>>> origin/main
         self.client = Groq()
         self.messages = []
 
@@ -303,11 +300,8 @@ class Chat:
         '7'
         >>> c.run_tool('ls', {'path': '/etc'})
         'Error: unsafe path'
-<<<<<<< HEAD
 
         # Test handling of an unregistered or hallucinated tool name
-=======
->>>>>>> origin/main
         >>> c.run_tool('nonexistent_tool_xyz', {})
         "Error: unknown tool 'nonexistent_tool_xyz'"
         """
@@ -344,22 +338,16 @@ class Chat:
         >>> 'WORLD' in reply_x
         False
 
-<<<<<<< HEAD
         # --- NEW TESTS ADDED BELOW ---
 
         # Setup: Mock the LLM client to test the tool-calling loop deterministically
-=======
->>>>>>> origin/main
         >>> from unittest.mock import MagicMock
         >>> import json
         >>> c = Chat()
         >>> c.client = MagicMock()
-<<<<<<< HEAD
 
         # 1. Test the tool calling while-loop
         # Create mock response A: The LLM decides to call a tool
-=======
->>>>>>> origin/main
         >>> tc = MagicMock()
         >>> tc.id = 'call_abc123'
         >>> tc.function.name = 'calculate'
@@ -369,17 +357,13 @@ class Chat:
         >>> msg_tool.content = None
         >>> resp1 = MagicMock()
         >>> resp1.choices = [MagicMock(message=msg_tool)]
-<<<<<<< HEAD
 
         # Create mock response B: The LLM replies with the final text
-=======
->>>>>>> origin/main
         >>> msg_text = MagicMock()
         >>> msg_text.tool_calls = None
         >>> msg_text.content = 'The answer is 10.'
         >>> resp2 = MagicMock()
         >>> resp2.choices = [MagicMock(message=msg_text)]
-<<<<<<< HEAD
 
         # Assign the sequence of responses to the mock client
         >>> c.client.chat.completions.create.side_effect = [resp1, resp2]
@@ -390,11 +374,6 @@ class Chat:
         
         # Verify the message history correctly recorded all 4 steps:
         # [User prompt, LLM tool request, Tool result, Final LLM reply]
-=======
-        >>> c.client.chat.completions.create.side_effect = [resp1, resp2]
-        >>> c.send_message('What is 5 + 5?')
-        'The answer is 10.'
->>>>>>> origin/main
         >>> len(c.messages)
         4
         >>> c.messages[2]['role']
@@ -402,20 +381,14 @@ class Chat:
         >>> c.messages[2]['content']
         '10'
 
-<<<<<<< HEAD
         # 2. Test the empty content fallback logic (msg.content or '')
-=======
->>>>>>> origin/main
         >>> msg_empty = MagicMock()
         >>> msg_empty.tool_calls = None
         >>> msg_empty.content = None
         >>> resp3 = MagicMock()
         >>> resp3.choices = [MagicMock(message=msg_empty)]
         >>> c.client.chat.completions.create.side_effect = [resp3]
-<<<<<<< HEAD
         
-=======
->>>>>>> origin/main
         >>> c.send_message('Say nothing.')
         ''
         """
@@ -469,11 +442,7 @@ def repl():
     ...     def __init__(self):
     ...         self.messages = []
     ...     def send_message(self, text, temperature=0.0):
-<<<<<<< HEAD
     ...         return "I hear you."
-=======
-    ...         return 'I hear you.'
->>>>>>> origin/main
     >>> globals()['Chat'] = StubChat
     >>> input_sequence = ['Hello agent!', EOFError()]
     >>> def fake_input(prompt):
@@ -482,20 +451,14 @@ def repl():
     ...         raise val
     ...     return val
     >>> builtins.input = fake_input
-<<<<<<< HEAD
     >>> repl() 
     Hello! How can I assist you today?
-=======
-    >>> repl()  # doctest: +ELLIPSIS
-    ...
->>>>>>> origin/main
     <BLANKLINE>
 
     >>> os.path.isdir = original_isdir
     >>> os.path.isfile = original_isfile
     >>> builtins.input = original_input
     >>> globals()['Chat'] = original_chat
-<<<<<<< HEAD
 
     >>> input_sequence = ['/help', '/ls .', '/calculate 2+2', '/grep def chat.py', '/unknown', EOFError()]
     >>> def fake_input(prompt):
@@ -511,19 +474,13 @@ def repl():
     <BLANKLINE>
     """
     # Check for .git folder in current directory
-=======
-    """
->>>>>>> origin/main
     if not os.path.isdir('.git'):
         print('Error: no .git folder found. Please run chat from a git repo.')
         sys.exit(1)
 
     chat = Chat()
 
-<<<<<<< HEAD
     # Load AGENTS.md into the conversation if it exists
-=======
->>>>>>> origin/main
     if os.path.isfile('AGENTS.md'):
         agents_contents = cat('AGENTS.md')
         chat.messages.append({
@@ -561,21 +518,11 @@ def repl():
                 elif cmd == 'doctests':
                     print(doctests(arg))
                 elif cmd == 'write_file':
-<<<<<<< HEAD
                     subparts = arg.split(None, 1)  # use its own variable
                     if len(subparts) < 2:
                         print('Error: /write_file <path> <contents>')
                     else:
                         print(write_file(subparts[0], subparts[1], 'write via slash command'))
-=======
-                    subparts = arg.split(None, 1)
-                    if len(subparts) < 2:
-                        print('Error: /write_file <path> <contents>')
-                    else:
-                        print(write_file(
-                            subparts[0], subparts[1], 'write via slash command'
-                        ))
->>>>>>> origin/main
                 elif cmd == 'rm':
                     print(rm(arg))
                 elif cmd == 'help':
@@ -594,10 +541,7 @@ def repl():
                     print(f"Unknown command '/{cmd}.' Type /help for a list.")
                 continue
 
-<<<<<<< HEAD
 
-=======
->>>>>>> origin/main
             response = chat.send_message(user_input, temperature=0.0)
             print(response)
     except (KeyboardInterrupt, EOFError):

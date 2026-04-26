@@ -288,8 +288,4 @@ def rm(path):
     except Exception as e:
         return f'Files deleted but git error: {e}'
 
-<<<<<<< HEAD
     return f'Deleted: {", ".join(removed)}'
-=======
-    return f'Deleted: {", ".join(removed)}'
->>>>>>> origin/main

@@ -24,12 +24,6 @@ chat = "python_llm.chat:repl"
 [tool.flake8]
 max-line-length = 120
 
-<<<<<<< HEAD
-[tool.pytest.ini_options]
-addopts = "--doctest-modules"
-testpaths = ["tests", "python_llm"]
-norecursedirs = [".git", ".venv", "build", "dist"]
-=======
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["python_llm*"]
@@ -38,4 +32,3 @@ exclude = ["test_projects*", "tests*"]
 [tool.pytest.ini_options]
 addopts = "--doctest-modules"
 testpaths = ["tests", "python_llm"]
->>>>>>> origin/main
