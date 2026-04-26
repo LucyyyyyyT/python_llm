@@ -3,3 +3,4 @@ python-dotenv
 pytest
 coverage
 flake8
+gitpython

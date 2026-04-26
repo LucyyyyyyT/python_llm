@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 """Search tool for grepping files and directories."""
 import os
 import re
@@ -5,6 +6,12 @@ import re
 from python_llm.tools.filesystem import is_path_safe
 
 
+=======
+import os
+import re
+from python_llm.tools.filesystem import is_path_safe
+
+>>>>>>> origin/main
 def grep(pattern, path='.'):
     """
     Search for lines matching a regex pattern (recursive).
@@ -22,11 +29,17 @@ def grep(pattern, path='.'):
     >>> grep('[invalid', 'chat.py')
     'Error: invalid pattern: unterminated character set at position 0'
 
+<<<<<<< HEAD
     >>> import shutil
     >>> _orig_dir = os.getcwd()
     >>> os.chdir(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
     >>> if os.path.exists('test_grep_dir'):
     ...     shutil.rmtree('test_grep_dir')
+=======
+    # --- NEW TESTS ADDED BELOW ---
+
+    # Setup: Create a temporary directory structure for testing
+>>>>>>> origin/main
     >>> os.mkdir('test_grep_dir')
     >>> with open('test_grep_dir/file1.txt', 'w', encoding='utf-8') as f:
     ...     _ = f.write('hello\\nsearch target\\nworld')
@@ -37,6 +50,7 @@ def grep(pattern, path='.'):
     >>> with open('test_grep_dir/.hidden/file3.txt', 'w', encoding='utf-8') as f:
     ...     _ = f.write('search target hidden')
 
+<<<<<<< HEAD
     >>> grep('target', 'test_grep_dir/file1.txt').replace('\\\\', '/')
     'test_grep_dir/file1.txt:search target'
 
@@ -51,13 +65,35 @@ def grep(pattern, path='.'):
     >>> 'test_grep_dir/file1.txt:search target' in grep('search target').replace('\\\\', '/')
     True
 
+=======
+    # 1. Test single file match and correct formatting
+    # Note: We replace backslashes to ensure Windows/Linux cross-compatibility in the test
+    >>> grep('target', 'test_grep_dir/file1.txt').replace('\\\\', '/')
+    'test_grep_dir/file1.txt:search target'
+
+    # 2. Test directory recursion and hidden directory filtering
+    # Should find file1 and file2, but skip file3 because it is in a '.hidden' folder
+    >>> result = grep('target', 'test_grep_dir').replace('\\\\', '/')
+    >>> result.split('\\n') == ['test_grep_dir/file1.txt:search target', 'test_grep_dir/subdir/file2.txt:another search target here']
+    True
+
+    # 3. Test default path argument (searches current directory '.')
+    # We check if it successfully finds the test file we just generated
+    >>> 'test_grep_dir/file1.txt:search target' in grep('search target').replace('\\\\', '/')
+    True
+
+    # Cleanup: Remove the temporary files and directories
+>>>>>>> origin/main
     >>> os.remove('test_grep_dir/file1.txt')
     >>> os.remove('test_grep_dir/subdir/file2.txt')
     >>> os.rmdir('test_grep_dir/subdir')
     >>> os.remove('test_grep_dir/.hidden/file3.txt')
     >>> os.rmdir('test_grep_dir/.hidden')
     >>> os.rmdir('test_grep_dir')
+<<<<<<< HEAD
     >>> os.chdir(_orig_dir)
+=======
+>>>>>>> origin/main
     """
     if not is_path_safe(path):
         return 'Error: unsafe path'
