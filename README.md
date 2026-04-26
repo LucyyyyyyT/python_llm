@@ -1,9 +1,9 @@
 # Python LLM Chat Agent
 
-![doctests](https://github.com/LucyyyyyyT/python_llm/actions/workflows/doctests.yml/badge.svg)
-![test_integration](https://github.com/LucyyyyyyT/python_llm/actions/workflows/test_integration.yml/badge.svg)
-[![flake8](https://github.com/LucyyyyyyT/python_llm/actions/workflows/flake8.yml/badge.svg)](https://github.com/LucyyyyyyT/python_llm/actions/workflows/flake8.yml)
-![Coverage](https://github.com/LucyyyyyyT/python_llm/actions/workflows/test.yml/badge.svg)
+[![doctest](https://github.com/LucyyyyyyT/python_llm/actions/workflows/doctests.yml/badge.svg)](https://github.com/LucyyyyyyT/python_llm/actions/workflows/doctests.yml?branch=project4)
+[![integration-tests](https://github.com/LucyyyyyyT/python_llm/actions/workflows/test_integration.yml/badge.svg)](https://github.com/LucyyyyyyT/python_llm/actions/workflows/test_integration.yml?branch=project4)
+[![flake8](https://github.com/LucyyyyyyT/python_llm/actions/workflows/flake8.yml/badge.svg)](https://github.com/LucyyyyyyT/python_llm/actions/workflows/flake8.yml?branch=project4)
+[![coverage](https://github.com/LucyyyyyyT/python_llm/actions/workflows/test.yml/badge.svg)](https://github.com/LucyyyyyyT/python_llm/actions/workflows/test.yml?branch=project4)
 [![PyPI](https://img.shields.io/pypi/v/python-llm-lucy)](https://pypi.org/project/python-llm-lucy/)
 
 A chat agent that depends on command line and uses Groq's LLM API. It is able to hold conversations and answer questions. It can also call built-in tools: `calculate`, `cat`, `grep`, `ls`, `doctests`, `write_file`, `rm`.
