@@ -74,3 +74,10 @@ a2b3c4d [docchat] rm hello.py
 f01358c [docchat] Add hello.py that prints hello world
 86b74ed coverage badge
 ```
+
+## Extra Credit: AI Agent Markdown Compiler
+
+The following branch contains a markdown compiler implemented autonomously 
+by the AI agent, with only AI-generated commits:
+
+https://github.com/LucyyyyyyT/markdown-compiler-agent
