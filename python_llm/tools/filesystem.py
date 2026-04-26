@@ -244,7 +244,7 @@ def write_file(path, contents, commit_message):
     )
 
 
-def rm(path):
+def rm(path, commit_message=None):
     """
     Delete a file (supports globs) and commit the removal to git.
 
