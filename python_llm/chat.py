@@ -322,7 +322,7 @@ class Chat:
         self.client = OpenAI(
             api_key=os.environ.get('OPENROUTER_API_KEY'),
             base_url='https://openrouter.ai/api/v1',
-        )           
+        )          
         self.messages = []
 
     def run_tool(self, name, args):
