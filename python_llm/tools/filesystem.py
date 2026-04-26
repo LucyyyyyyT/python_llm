@@ -292,6 +292,7 @@ def rm(path, commit_message=None):
 
     return f'Deleted: {", ".join(removed)}'
 
+
 def pip_install(library_name):
     """
     Install a Python library using pip.
