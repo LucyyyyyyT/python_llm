@@ -1,7 +1,7 @@
 name: flake8
 on:
   push:
-    branches: ['*']
+    branches: ['project4']
 jobs:
   tests:
     strategy:

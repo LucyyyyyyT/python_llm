@@ -2,7 +2,7 @@ name: doctest
 
 on:
   push:
-    branches: ['*']
+    branches: ['project4']
 
 
 jobs:

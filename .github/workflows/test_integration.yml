@@ -1,7 +1,7 @@
 name: integration-tests
 on:
   push:
-    branches: ['*']
+    branches: ['project4']
 
 jobs:
   test:
