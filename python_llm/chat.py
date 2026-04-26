@@ -8,13 +8,13 @@ import sys
 from groq import Groq
 
 from python_llm.tools.calculator import calculate
-from python_llm.tools.filesystem import ls, cat, doctests, write_file, write_files, rm, pip_install
+from python_llm.tools.filesystem import ls, cat, doctests, write_file, write_files, rm
 from python_llm.tools.search import grep
 
 from dotenv import load_dotenv
 load_dotenv()
 
-MODEL = 'anthropic/claude-opus-4-5'
+MODEL = 'openai/gpt-oss-120b'
 
 CALCULATE_SCHEMA = {
     'type': 'function',
@@ -212,24 +212,6 @@ RM_SCHEMA = {
     },
 }
 
-PIP_INSTALL_SCHEMA = {
-    'type': 'function',
-    'function': {
-        'name': 'pip_install',
-        'description': 'Install a Python library using pip.',
-        'parameters': {
-            'type': 'object',
-            'properties': {
-                'library_name': {
-                    'type': 'string',
-                    'description': 'The name of the library to install.',
-                },
-            },
-            'required': ['library_name'],
-        },
-    },
-}
-
 ALL_TOOL_SCHEMAS = [
     CALCULATE_SCHEMA,
     LS_SCHEMA,
@@ -239,7 +221,6 @@ ALL_TOOL_SCHEMAS = [
     WRITE_FILE_SCHEMA,
     WRITE_FILES_SCHEMA,
     RM_SCHEMA,
-    PIP_INSTALL_SCHEMA,
 ]
 
 
@@ -253,23 +234,7 @@ TOOL_DISPATCH = {
     'write_file': write_file,
     'write_files': write_files,
     'rm': rm,
-    'pip_install': pip_install,
 }
-
-def _doctests_failed(result):
-    """
-    Return True if a doctest result string indicates failures.
-
-    >>> _doctests_failed('1 failed')
-    True
-    >>> _doctests_failed('2 failed, 1 passed')
-    True
-    >>> _doctests_failed('all passed')
-    False
-    >>> _doctests_failed('ok')
-    False
-    """
-    return 'failed' in result.lower()
 
 
 class Chat:
@@ -318,10 +283,7 @@ class Chat:
         >>> else:
         ...     del globals()['Groq']
         """
-        self.client = Groq(
-            api_key=os.environ.get('OPENROUTER_API_KEY'),
-            base_url='https://openrouter.ai/api/v1',
-        )
+        self.client = Groq()
         self.messages = []
 
     def run_tool(self, name, args):
@@ -445,15 +407,6 @@ class Chat:
                         'tool_call_id': tc.id,
                         'content': result,
                     })
-                    if tc.function.name in ('doctests', 'write_file', 'write_files'):
-                        if _doctests_failed(result):
-                            self.messages.append({
-                                'role': 'user',
-                                'content': (
-                                    'The doctests failed. Please fix the code and '
-                                    'run the doctests again until they all pass.'
-                                ),
-                            })
             else:
                 content = msg.content or ''
                 self.messages.append({'role': 'assistant', 'content': content})
@@ -591,21 +544,4 @@ def repl():
 
 if __name__ == "__main__":
     repl()
-
-PIP_INSTALL_SCHEMA = {
-    'type': 'function',
-    'function': {
-        'name': 'pip_install',
-        'description': 'Install a Python library using pip.',
-        'parameters': {
-            'type': 'object',
-            'properties': {
-                'library_name': {
-                    'type': 'string',
-                    'description': 'The name of the library to install.',
-                },
-            },
-            'required': ['library_name'],
-        },
-    },
-}
+    
