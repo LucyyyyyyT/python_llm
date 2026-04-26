@@ -1,4 +1,4 @@
-name: Coverage
+name: coverage
 
 on:
   push:
@@ -27,22 +27,22 @@ jobs:
 
       - name: Run tests and collect coverage
         run: |
-          coverage run -m pytest --doctest-modules python_llm/ && coverage report -m
-
+          coverage run -m pytest chat.py --doctest-modules
+          coverage report -m
           COVERAGE_PERCENT=$(coverage report | tail -1 | awk '{print $NF}' | sed 's/%//')
-          if [ "$COVERAGE_PERCENT" -ge 90 ]; then
+          echo "Coverage: $COVERAGE_PERCENT%"
+          if [ $COVERAGE_PERCENT -ge 90 ]; then
+            echo "status=passed" >> $GITHUB_ENV
+          else
+            echo "status=failed" >> $GITHUB_ENV
+          fi
+
+      - name: Create coverage badge
+        run: |
+          if [ "$status" = "passed" ]; then
             COLOR="brightgreen"
           else
             COLOR="red"
           fi
-          BADGE="![Coverage](https://img.shields.io/badge/coverage-${COVERAGE_PERCENT}%25-${COLOR})"
-          sed -i "s|!\[Coverage\](https://img.shields.io/badge/coverage-.*)|$BADGE|" README.md
-
-      - name: Commit badge
-        if: github.ref == 'refs/heads/main'
-        run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "actions@github.com"
-          git add README.md
-          git diff --staged --quiet || git commit -m "Update coverage badge"
-          git push
+          echo "https://img.shields.io/badge/coverage-$status-$COLOR" > badge_url.txt
+        shell: bash

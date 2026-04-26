@@ -3,8 +3,9 @@
 An AI-powered document chat agent that lets users query files using natural language and shell-like commands.
 
 ![doctests](https://github.com/LucyyyyyyT/python_llm/actions/workflows/doctests.yml/badge.svg)
+![test_integration](https://github.com/LucyyyyyyT/python_llm/actions/workflows/test_integration.yml/badge.svg)
 ![flake8](https://github.com/LucyyyyyyT/python_llm/actions/workflows/flake8.yml/badge.svg)
-![Coverage](https://img.shields.io/badge/coverage-0%25-red)
+![Coverage](https://github.com/LucyyyyyyT/python_llm/actions/workflows/test.yml/badge.svg)
 [![PyPI](https://img.shields.io/pypi/v/python-llm-lucy)](https://pypi.org/project/python-llm-lucy/)
 
 A chat agent that depends on command line and uses Groq's LLM API. It is able to hold conversations and answer questions. It can also call built-in tools: (`calculate`, `cat`, `grep`, `ls`). 
