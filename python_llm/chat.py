@@ -5,7 +5,7 @@ Lets users query files using natural language and shell-like commands.
 import json
 import os
 import sys
-from groq import Groq
+from openai import OpenAI
 
 from python_llm.tools.calculator import calculate
 from python_llm.tools.filesystem import ls, cat, doctests, write_file, write_files, rm, pip_install
@@ -14,7 +14,7 @@ from python_llm.tools.search import grep
 from dotenv import load_dotenv
 load_dotenv()
 
-MODEL = 'openai/gpt-oss-120b'
+MODEL = 'anthropic/claude-opus-4-5'
 
 CALCULATE_SCHEMA = {
     'type': 'function',
@@ -256,6 +256,7 @@ TOOL_DISPATCH = {
     'pip_install': pip_install,
 }
 
+
 def _doctests_failed(result):
     """
     Return True if a doctest result string indicates failures.
@@ -318,7 +319,10 @@ class Chat:
         >>> else:
         ...     del globals()['Groq']
         """
-        self.client = Groq()
+        self.client = OpenAI(
+        api_key=os.environ.get('OPENROUTER_API_KEY'),
+        base_url='https://openrouter.ai/api/v1',
+        )           
         self.messages = []
 
     def run_tool(self, name, args):
