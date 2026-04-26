@@ -13,6 +13,7 @@ _ALLOWED_OPS = {
     ast.FloorDiv: operator.floordiv,
 }
 
+
 def _eval_node(node):
     """
     Recursively evaluate a single AST node.
@@ -23,11 +24,11 @@ def _eval_node(node):
     1. Valid integer Constant
     >>> _eval_node(ast.parse('42', mode='eval').body)
     42
-    
+
     2. Valid float Constant
     >>> _eval_node(ast.parse('3.14', mode='eval').body)
     3.14
-    
+
     3. Invalid Constant (e.g., string)
     >>> _eval_node(ast.parse('"hello"', mode='eval').body)
     Traceback (most recent call last):
@@ -38,7 +39,7 @@ def _eval_node(node):
     4. Valid BinOp (Addition)
     >>> _eval_node(ast.parse('10 + 5', mode='eval').body)
     15
-    
+
     5. Invalid BinOp (Bitwise OR - not in _ALLOWED_OPS)
     >>> _eval_node(ast.parse('3 | 7', mode='eval').body)
     Traceback (most recent call last):
@@ -49,7 +50,7 @@ def _eval_node(node):
     6. Valid UnaryOp (Negation)
     >>> _eval_node(ast.parse('-5', mode='eval').body)
     -5
-    
+
     7. Invalid UnaryOp (Bitwise Inversion - not in _ALLOWED_OPS)
     >>> _eval_node(ast.parse('~5', mode='eval').body)
     Traceback (most recent call last):
@@ -83,6 +84,7 @@ def _eval_node(node):
     else:
         raise ValueError('invalid expression')
 
+
 def calculate(expression):
     """
     Evaluate a simple arithmetic expression and return the result as a string.
@@ -111,7 +113,7 @@ def calculate(expression):
     'Error: invalid expression'
     >>> calculate('None + 1')
     'Error: invalid expression'
-    
+
     # Tests the floor division exclusion branch ('//' not in expression)
     # 10.0 // 2 evaluates to the float 5.0, but should be formatted as '5'
     >>> calculate('10.0 // 2')
