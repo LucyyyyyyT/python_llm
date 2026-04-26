@@ -24,6 +24,6 @@ jobs:
 
       - name: Run doctests
         env: 
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: |
           coverage run -m pytest --doctest-modules python_llm/ && coverage report -m
