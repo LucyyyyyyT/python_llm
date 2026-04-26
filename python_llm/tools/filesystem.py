@@ -291,3 +291,22 @@ def rm(path, commit_message=None):
         return f'Files deleted but git error: {e}'
 
     return f'Deleted: {", ".join(removed)}'
+
+def pip_install(library_name):
+    """
+    Install a Python library using pip.
+
+    >>> pip_install('')
+    'Error: empty library name'
+    """
+    if not library_name.strip():
+        return 'Error: empty library name'
+    result = subprocess.run(
+        [sys.executable, '-m', 'pip', 'install', library_name],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode == 0:
+        return f'Successfully installed {library_name}'
+    return f'Error installing {library_name}: {result.stderr}'
+

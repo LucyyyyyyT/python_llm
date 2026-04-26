@@ -212,6 +212,24 @@ RM_SCHEMA = {
     },
 }
 
+PIP_INSTALL_SCHEMA = {
+    'type': 'function',
+    'function': {
+        'name': 'pip_install',
+        'description': 'Install a Python library using pip.',
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'library_name': {
+                    'type': 'string',
+                    'description': 'The name of the library to install.',
+                },
+            },
+            'required': ['library_name'],
+        },
+    },
+}
+
 ALL_TOOL_SCHEMAS = [
     CALCULATE_SCHEMA,
     LS_SCHEMA,
@@ -237,6 +255,21 @@ TOOL_DISPATCH = {
     'rm': rm,
     'pip_install': pip_install,
 }
+
+def _doctests_failed(result):
+    """
+    Return True if a doctest result string indicates failures.
+
+    >>> _doctests_failed('1 failed')
+    True
+    >>> _doctests_failed('2 failed, 1 passed')
+    True
+    >>> _doctests_failed('all passed')
+    False
+    >>> _doctests_failed('ok')
+    False
+    """
+    return 'failed' in result.lower()
 
 
 class Chat:
@@ -409,6 +442,15 @@ class Chat:
                         'tool_call_id': tc.id,
                         'content': result,
                     })
+                    if tc.function.name in ('doctests', 'write_file', 'write_files'):
+                        if _doctests_failed(result):
+                            self.messages.append({
+                                'role': 'user',
+                                'content': (
+                                    'The doctests failed. Please fix the code and '
+                                    'run the doctests again until they all pass.'
+                                ),
+                            })
             else:
                 content = msg.content or ''
                 self.messages.append({'role': 'assistant', 'content': content})
