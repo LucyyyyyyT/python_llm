@@ -4,7 +4,7 @@ An AI-powered document chat agent that lets users query files using natural lang
 
 ![doctests](https://github.com/LucyyyyyyT/python_llm/actions/workflows/doctests.yml/badge.svg)
 ![test_integration](https://github.com/LucyyyyyyT/python_llm/actions/workflows/test_integration.yml/badge.svg)
-![flake8](https://github.com/LucyyyyyyT/python_llm/actions/workflows/flake8.yml/badge.svg)
+[![flake8](https://github.com/LucyyyyyyT/python_llm/actions/workflows/flake8.yml/badge.svg)](https://github.com/LucyyyyyyT/python_llm/actions/workflows/flake8.yml)
 ![Coverage](https://github.com/LucyyyyyyT/python_llm/actions/workflows/test.yml/badge.svg)
 [![PyPI](https://img.shields.io/pypi/v/python-llm-lucy)](https://pypi.org/project/python-llm-lucy/)
 
