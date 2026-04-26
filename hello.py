@@ -1,32 +1,35 @@
 # hello.py
 """
-A simple script that prints a greeting.
+A simple script that prints "hello world" when executed.
 
-The module provides a ``main`` function that prints ``"hello cat"``
-when executed.  The module can be run directly as a script::
+The module provides a ``main`` function that performs the printing, and
+executes it when run as a script.
 
-    python hello.py
-
-Running the module will output::
-
-    hello cat
-
-Doctest examples demonstrate the expected output.
+Doctests
+========
+>>> # Running the module directly prints the greeting.
+>>> # This doctest demonstrates the expected output when the script is executed.
+>>> # Note: The doctest runner captures stdout, so we use the ``print`` output.
+>>> import subprocess, sys, os
+>>> result = subprocess.run([sys.executable, os.path.abspath('hello.py')], capture_output=True, text=True)
+>>> result.stdout.strip()
+'hello world'
 """
 
 def main() -> None:
-    """Print the greeting ``"hello cat"``.
+    """Print ``hello world`` to standard output.
 
-    >>> import sys, io
-    >>> captured = io.StringIO()
-    >>> sys_stdout = sys.stdout
-    >>> sys.stdout = captured
+    >>> from io import StringIO
+    >>> import sys
+    >>> backup = sys.stdout
+    >>> sys.stdout = StringIO()
     >>> main()
-    >>> sys.stdout = sys_stdout
-    >>> captured.getvalue().strip()
-    'hello cat'
+    >>> output = sys.stdout.getvalue().strip()
+    >>> sys.stdout = backup
+    >>> output
+    'hello world'
     """
-    print("hello cat")
+    print("hello world")
 
 
 if __name__ == "__main__":
